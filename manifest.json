@@ -10,13 +10,13 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "https://github.com/142blacknight-spec/weightlens/blob/main/weight-scale.png",
+      "src": "/weightlens/weight-scale.png",
       "sizes": "512x512",
       "type": "png",
       "purpose": "any maskable"
     },
     {
-      "src": "https://github.com/142blacknight-spec/weightlens/blob/main/weight-scale.png",
+      "src": "/weightlens/weight-scale.png",
       "sizes": "512x512",
       "type": "png",
       "purpose": "any maskable"
