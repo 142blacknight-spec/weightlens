@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0b0f14" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="description" content="Weight tracker with Health Connect integration" />
+  <link rel="manifest" href="manifest.json" />
+  <title>WeightLens</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:#0b0f14; --surface:#131820; --surface2:#1a2230; --border:#1f2d3d;
+      --accent:#00e5ff; --accent2:#ff4d6d; --accent3:#b8ff3f; --purple:#b48aff;
+      --text:#e8edf2; --muted:#566578;
+      --font-head:'Syne',sans-serif; --font-mono:'DM Mono',monospace;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html,body{background:var(--bg);color:var(--text);font-family:var(--font-mono);min-height:100vh;overflow-x:hidden}
+    body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,229,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.025) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
+    #app{position:relative;z-index:1;max-width:480px;margin:0 auto;padding:24px 16px 100px}
+
+    header{margin-bottom:26px}
+    .logo{font-family:var(--font-head);font-weight:800;font-size:2rem;letter-spacing:-.03em;background:linear-gradient(135deg,var(--accent),var(--accent3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .logo span{-webkit-text-fill-color:var(--accent2)}
+    .tagline{font-size:.68rem;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin-top:4px}
+
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px 20px;margin-bottom:13px}
+    .section-label{font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:11px}
+
+    .hc-banner{background:linear-gradient(135deg,rgba(0,229,255,.07),rgba(184,255,63,.04));border:1px solid rgba(0,229,255,.22);border-radius:14px;padding:15px 17px;margin-bottom:13px;display:flex;gap:13px;align-items:flex-start}
+    .hc-icon{font-size:1.9rem;flex-shrink:0;line-height:1;margin-top:2px}
+    .hc-text h3{font-family:var(--font-head);font-size:.92rem;font-weight:600;color:var(--accent);margin-bottom:5px}
+    .hc-text p{font-size:.71rem;color:var(--muted);line-height:1.65}
+    .hc-text a{color:var(--accent);text-decoration:none}
+
+    .status-pill{display:inline-flex;align-items:center;gap:6px;font-size:.69rem;padding:5px 11px;border-radius:99px;background:var(--surface);border:1px solid var(--border);color:var(--muted);margin-top:10px}
+    .status-pill.connected{border-color:var(--accent3);color:var(--accent3)}
+    .status-pill .dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+    .status-pill.connected .dot{box-shadow:0 0 6px var(--accent3)}
+
+    .connect-btn{display:flex;align-items:center;justify-content:center;gap:10px;background:linear-gradient(135deg,rgba(0,229,255,.13),rgba(184,255,63,.06));border:1px solid var(--accent);color:var(--accent);border-radius:12px;padding:13px 20px;font-family:var(--font-mono);font-size:.84rem;cursor:pointer;width:100%;transition:all .2s;font-weight:500}
+    .connect-btn:hover{background:rgba(0,229,255,.2);transform:translateY(-1px)}
+
+    .time-pills{display:flex;gap:7px;flex-wrap:wrap}
+    .pill-btn{background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:7px 13px;font-family:var(--font-mono);font-size:.76rem;cursor:pointer;transition:all .15s}
+    .pill-btn.active{background:rgba(0,229,255,.1);border-color:var(--accent);color:var(--accent)}
+    .date-range{display:flex;gap:9px;margin-top:11px;align-items:center}
+    .date-range input{flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 10px;font-family:var(--font-mono);font-size:.76rem;outline:none}
+    .date-range input:focus{border-color:var(--accent)}
+    .date-range span{color:var(--muted);font-size:.73rem}
+
+    .chart-toggles{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .toggle-btn{background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:10px;padding:10px 12px;font-family:var(--font-mono);font-size:.74rem;cursor:pointer;transition:all .15s;text-align:left;display:flex;align-items:center;gap:8px}
+    .toggle-btn.active[data-type="raw"]  {border-color:var(--accent); color:var(--accent); background:rgba(0,229,255,.07)}
+    .toggle-btn.active[data-type="fit"]  {border-color:var(--accent2);color:var(--accent2);background:rgba(255,77,109,.07)}
+    .toggle-btn.active[data-type="mavg"] {border-color:var(--purple); color:var(--purple); background:rgba(180,138,255,.07)}
+    .toggle-btn.active[data-type="band"] {border-color:var(--accent3);color:var(--accent3);background:rgba(184,255,63,.07)}
+
+    .unit-row{display:flex;gap:8px}
+    .unit-btn{background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:7px 18px;font-family:var(--font-mono);font-size:.79rem;cursor:pointer;transition:all .15s}
+    .unit-btn.active{background:rgba(0,229,255,.1);border-color:var(--accent);color:var(--accent)}
+
+    .load-btn{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:12px;padding:14px;font-family:var(--font-mono);font-size:.84rem;cursor:pointer;transition:all .2s;font-weight:500;margin-bottom:13px}
+    .load-btn:hover{border-color:var(--accent);color:var(--accent)}
+    .load-btn:disabled{opacity:.4;cursor:not-allowed}
+
+    .fit-box{background:rgba(255,77,109,.06);border:1px solid rgba(255,77,109,.22);border-radius:14px;padding:14px 17px;margin-bottom:13px;display:none}
+    .fit-box .section-label{margin-bottom:9px}
+    .fit-chips{display:flex;gap:7px;flex-wrap:wrap}
+    .fit-chip{background:rgba(255,77,109,.08);border:1px solid rgba(255,77,109,.2);border-radius:8px;padding:6px 11px;font-size:.71rem;color:#ff8fa3}
+    .fit-chip strong{color:var(--accent2)}
+
+    .stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:13px}
+    .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 10px;text-align:center}
+    .stat-value{font-family:var(--font-head);font-size:1.1rem;font-weight:600;color:var(--accent)}
+    .stat-label{font-size:.59rem;color:var(--muted);text-transform:uppercase;letter-spacing:.09em;margin-top:3px}
+
+    /* CHART */
+    .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:17px 13px 13px;margin-bottom:13px;display:none}
+    .chart-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
+    .chart-title{font-family:var(--font-head);font-size:.88rem;font-weight:600}
+    .chart-hint{font-size:.62rem;color:var(--muted)}
+    .chart-wrap{position:relative}
+    canvas{display:block;touch-action:none;cursor:crosshair}
+
+    /* TOOLTIP */
+    #tt{position:absolute;background:#0d1117;border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-size:.72rem;pointer-events:none;display:none;z-index:20;min-width:150px;box-shadow:0 8px 28px rgba(0,0,0,.6)}
+    #tt .tt-date{color:var(--muted);font-size:.63rem;margin-bottom:7px;letter-spacing:.05em}
+    #tt .tt-row{display:flex;justify-content:space-between;gap:14px;margin-bottom:3px;align-items:center}
+    #tt .tt-row:last-child{margin-bottom:0}
+    #tt .tt-lbl{color:var(--muted)}
+    #tt .v-raw {color:var(--accent)}
+    #tt .v-fit {color:var(--accent2)}
+    #tt .v-mavg{color:var(--purple)}
+    #tt .v-band{color:var(--accent3)}
+
+    .legend{display:flex;flex-wrap:wrap;gap:9px;margin-top:10px}
+    .legend-item{display:flex;align-items:center;gap:5px;font-size:.66rem;color:var(--muted)}
+    .leg-sw{width:18px;height:3px;border-radius:2px;flex-shrink:0}
+
+    .data-table{width:100%;border-collapse:collapse;font-size:.73rem}
+    .data-table th{color:var(--muted);font-weight:400;text-align:left;padding:5px 0;border-bottom:1px solid var(--border);font-size:.62rem;letter-spacing:.07em;text-transform:uppercase}
+    .data-table td{padding:7px 0;border-bottom:1px solid rgba(31,45,61,.45)}
+    .data-table tr:last-child td{border-bottom:none}
+    .data-table .v{color:var(--accent)}
+    .data-table .fv{color:var(--accent2)}
+
+    .empty-state{text-align:center;padding:48px 20px;color:var(--muted);font-size:.79rem;line-height:1.85}
+    .empty-state .big{font-size:2.8rem;margin-bottom:12px}
+
+    .spinner{display:inline-block;width:13px;height:13px;border:2px solid rgba(0,229,255,.2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:7px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    #installBar{position:fixed;bottom:0;left:0;right:0;background:var(--surface2);border-top:1px solid var(--border);padding:13px 20px;display:none;align-items:center;gap:12px;z-index:100}
+    #installBar p{flex:1;font-size:.76rem;color:var(--muted)}
+    #installBar .inst{background:var(--accent);color:var(--bg);border:none;border-radius:8px;padding:8px 15px;font-family:var(--font-mono);font-size:.76rem;font-weight:500;cursor:pointer}
+    #installBar .dis{background:transparent;color:var(--muted);border:none;cursor:pointer;padding:4px;font-size:1rem}
+  </style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="logo">Weight<span>Lens</span></div>
+    <div class="tagline">Health Connect · Weight Analytics</div>
+  </header>
+
+  <div class="hc-banner">
+    <div class="hc-icon">🏥</div>
+    <div class="hc-text">
+      <h3>Health Connect</h3>
+      <p>Requires the <strong style="color:var(--text)">Health Connect</strong> app (Android 9+, built-in on Android 14+).
+      Full integration works inside a <strong style="color:var(--text)">TWA / Android WebView</strong> that exposes the
+      <a href="https://developer.android.com/health-and-fitness/guides/health-connect/develop/get-started" target="_blank">Health Connect JS bridge</a>.
+      Tap <em>Load demo data</em> to preview now.</p>
+      <div class="status-pill" id="statusPill"><span class="dot"></span><span id="statusText">Not connected</span></div>
+    </div>
+  </div>
+
+  <button class="connect-btn" onclick="connectHC()">
+    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+    Connect Health Connect
+  </button>
+
+  <div class="card" style="margin-top:13px">
+    <div class="section-label">Time Window</div>
+    <div class="time-pills">
+      <button class="pill-btn" data-days="7">7D</button>
+      <button class="pill-btn active" data-days="30">30D</button>
+      <button class="pill-btn" data-days="90">3M</button>
+      <button class="pill-btn" data-days="180">6M</button>
+      <button class="pill-btn" data-days="365">1Y</button>
+      <button class="pill-btn" data-days="custom">Custom</button>
+    </div>
+    <div class="date-range" id="customRange" style="display:none">
+      <input type="date" id="startDate"/>
+      <span>→</span>
+      <input type="date" id="endDate"/>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-label">Chart Layers</div>
+    <div class="chart-toggles">
+      <button class="toggle-btn active" data-type="raw"  onclick="toggleLayer(this)"><span>⬤</span> Raw Data</button>
+      <button class="toggle-btn active" data-type="fit"  onclick="toggleLayer(this)"><span>╱</span> Linear Fit</button>
+      <button class="toggle-btn active" data-type="mavg" onclick="toggleLayer(this)"><span>≈</span> Moving Avg</button>
+      <button class="toggle-btn active" data-type="band" onclick="toggleLayer(this)"><span>◫</span> ±1σ Band</button>
+    </div>
+  </div>
+
+  <div class="card" style="padding:14px 20px">
+    <div class="section-label">Unit</div>
+    <div class="unit-row">
+      <button class="unit-btn active" data-unit="kg"  onclick="setUnit(this)">kg</button>
+      <button class="unit-btn"        data-unit="lbs" onclick="setUnit(this)">lbs</button>
+    </div>
+  </div>
+
+  <button class="load-btn" id="loadBtn" onclick="loadData()">Load Data</button>
+
+  <!-- FIT RESULTS -->
+  <div class="fit-box" id="fitBox">
+    <div class="section-label">Linear Fit Results</div>
+    <div class="fit-chips" id="fitChips"></div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-row" id="statsRow" style="display:none">
+    <div class="stat-card"><div class="stat-value" id="sCur">—</div><div class="stat-label">Current</div></div>
+    <div class="stat-card"><div class="stat-value" id="sMin">—</div><div class="stat-label">Min</div></div>
+    <div class="stat-card"><div class="stat-value" id="sMax">—</div><div class="stat-label">Max</div></div>
+    <div class="stat-card"><div class="stat-value" id="sAvg">—</div><div class="stat-label">Average</div></div>
+    <div class="stat-card"><div class="stat-value" id="sDlt">—</div><div class="stat-label">Change</div></div>
+    <div class="stat-card"><div class="stat-value" id="sPts">—</div><div class="stat-label">Points</div></div>
+  </div>
+
+  <!-- CHART -->
+  <div class="chart-card" id="chartCard">
+    <div class="chart-header">
+      <div class="chart-title">Weight over time</div>
+      <div class="chart-hint">drag / tap to inspect</div>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="wc"></canvas>
+      <div id="tt">
+        <div class="tt-date" id="ttDate"></div>
+        <div class="tt-row" id="rRaw"> <span class="tt-lbl">Raw</span>     <span class="v-raw"  id="vRaw">—</span></div>
+        <div class="tt-row" id="rFit"> <span class="tt-lbl">Fit</span>     <span class="v-fit"  id="vFit">—</span></div>
+        <div class="tt-row" id="rMavg"><span class="tt-lbl">Mov.Avg</span> <span class="v-mavg" id="vMavg">—</span></div>
+        <div class="tt-row" id="rBand"><span class="tt-lbl">±1σ</span>     <span class="v-band" id="vBand">—</span></div>
+      </div>
+    </div>
+    <div class="legend" id="legend"></div>
+  </div>
+
+  <!-- TABLE -->
+  <div class="card" id="tableCard" style="display:none">
+    <div class="section-label">Recent Entries</div>
+    <table class="data-table">
+      <thead><tr><th>Date</th><th>Measured</th><th>Fit</th><th>Δ</th></tr></thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+
+  <div class="empty-state" id="emptyState">
+    <div class="big">⚖️</div>
+    Connect Health Connect or load demo data<br/>to visualise your weight journey.
+  </div>
+</div>
+
+<div id="installBar">
+  <p>Add WeightLens to your home screen.</p>
+  <button class="inst" onclick="installPWA()">Install</button>
+  <button class="dis"  onclick="document.getElementById('installBar').style.display='none'">✕</button>
+</div>
+
+<script>
+/* ── STATE ─────────────────────────────────────────────────────── */
+let rawData = [];            // [{date,value}] value always in kg
+let fit     = null;          // {slope,intercept,r2,std}
+let mavgArr = [];
+let layers  = {raw:true,fit:true,mavg:true,band:true};
+let unit    = 'kg';
+let selDays = 30;
+let cidx    = null;          // cursor index
+let deferredInstall = null;
+
+/* ── PWA ───────────────────────────────────────────────────────── */
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault(); deferredInstall = e;
+  document.getElementById('installBar').style.display = 'flex';
+});
+function installPWA() {
+  if (!deferredInstall) return;
+  deferredInstall.prompt();
+  deferredInstall.userChoice.then(() => { deferredInstall=null; document.getElementById('installBar').style.display='none'; });
+}
+
+/* ── TIME PILLS ────────────────────────────────────────────────── */
+document.querySelectorAll('.pill-btn').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('.pill-btn').forEach(x => x.classList.remove('active'));
+  b.classList.add('active');
+  selDays = b.dataset.days === 'custom' ? 'custom' : parseInt(b.dataset.days);
+  document.getElementById('customRange').style.display = selDays==='custom' ? 'flex' : 'none';
+}));
+const today = new Date();
+document.getElementById('endDate').value   = today.toISOString().split('T')[0];
+const d30 = new Date(); d30.setDate(today.getDate()-30);
+document.getElementById('startDate').value = d30.toISOString().split('T')[0];
+
+/* ── UNIT ──────────────────────────────────────────────────────── */
+function setUnit(btn) {
+  document.querySelectorAll('.unit-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active'); unit = btn.dataset.unit;
+  if (rawData.length) { computeAnalytics(); renderStats(); draw(); renderTable(); }
+}
+function cv(kg) { return unit==='lbs' ? +(kg*2.20462).toFixed(2) : +kg.toFixed(2); }
+function ul()   { return unit; }
+
+/* ── LAYERS ────────────────────────────────────────────────────── */
+function toggleLayer(btn) {
+  const t = btn.dataset.type; layers[t] = !layers[t];
+  btn.classList.toggle('active', layers[t]);
+  if (rawData.length) draw();
+}
+
+/* ── HEALTH CONNECT ────────────────────────────────────────────── */
+async function connectHC() {
+  if (typeof HealthConnect !== 'undefined') {
+    try {
+      const ok = await HealthConnect.requestPermission([{accessType:'read',recordType:'WeightRecord'}]);
+      if (ok) { setStatus(true); await loadData(); }
+    } catch(e) { alert('Health Connect error:\n'+e.message); }
+  } else {
+    const msg = `Health Connect Web API is only available inside an Android TWA / WebView.\n\nTo deploy:\n1. Wrap this PWA as a Trusted Web Activity (TWA)\n2. Add BODY_SENSORS + Health Connect permissions to AndroidManifest.xml\n3. The HealthConnect JS bridge will be injected automatically\n\nTap OK to load demo data instead.`;
+    if (confirm(msg)) loadData(true);
+  }
+}
+function setStatus(ok) {
+  const p=document.getElementById('statusPill'), t=document.getElementById('statusText');
+  p.classList.toggle('connected',ok);
+  t.textContent = ok ? 'Health Connect connected' : 'Not connected';
+}
+async function readHC(start,end) {
+  const recs = await HealthConnect.readRecords('WeightRecord', {
+    timeRangeFilter:{type:'between',startTime:start.toISOString(),endTime:end.toISOString()}
+  });
+  return recs.map(r=>({date:new Date(r.time),value:r.weight.inKilograms}))
+             .sort((a,b)=>a.date-b.date);
+}
+
+/* ── DEMO DATA ─────────────────────────────────────────────────── */
+function genDemo(days) {
+  const pts=[]; let w=84.0; const now=new Date();
+  for (let i=days; i>=0; i--) {
+    if (Math.random()<.28 && i>0 && i<days) continue;
+    const d=new Date(now); d.setDate(d.getDate()-i);
+    w += (Math.random()-.53)*.45; w=Math.max(72,Math.min(100,w));
+    pts.push({date:d,value:parseFloat(w.toFixed(2))});
+  }
+  return pts;
+}
+
+/* ── LOAD ──────────────────────────────────────────────────────── */
+async function loadData(demo=false) {
+  const btn=document.getElementById('loadBtn');
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span>Loading…';
+  try {
+    let start,end;
+    if (selDays==='custom') {
+      start=new Date(document.getElementById('startDate').value);
+      end=new Date(document.getElementById('endDate').value); end.setHours(23,59,59);
+    } else {
+      end=new Date(); start=new Date(); start.setDate(end.getDate()-selDays);
+    }
+    if (!demo && typeof HealthConnect!=='undefined') {
+      rawData = await readHC(start,end);
+    } else {
+      const days = selDays==='custom' ? Math.ceil((end-start)/86400000) : selDays;
+      rawData = genDemo(days).filter(p=>p.date>=start&&p.date<=end);
+    }
+    if (!rawData.length) {
+      showEmpty('No weight data found in this time range.');
+    } else {
+      hideEmpty(); cidx=null;
+      computeAnalytics(); renderStats(); draw(); renderTable();
+    }
+  } catch(e) { alert('Error: '+e.message); }
+  btn.disabled=false; btn.textContent='Reload Data';
+}
+function showEmpty(m) {
+  document.getElementById('emptyState').innerHTML=`<div class="big">📭</div>${m}`;
+  ['chartCard','statsRow','fitBox','tableCard'].forEach(id=>document.getElementById(id).style.display='none');
+  document.getElementById('emptyState').style.display='block';
+}
+function hideEmpty() { document.getElementById('emptyState').style.display='none'; }
+
+/* ── ANALYTICS ─────────────────────────────────────────────────── */
+function computeAnalytics() {
+  const n=rawData.length, ys=rawData.map(p=>p.value);
+  const mx=(n-1)/2, my=ys.reduce((a,b)=>a+b,0)/n;
+  let num=0,den=0;
+  ys.forEach((y,i)=>{ num+=(i-mx)*(y-my); den+=(i-mx)**2; });
+  const slope=den?num/den:0, intercept=my-slope*mx;
+  const ssTot=ys.reduce((a,y)=>a+(y-my)**2,0);
+  const ssRes=ys.reduce((a,y,i)=>a+(y-(slope*i+intercept))**2,0);
+  const r2=ssTot?1-ssRes/ssTot:1;
+  const resids=ys.map((y,i)=>y-(slope*i+intercept));
+  const std=Math.sqrt(resids.reduce((a,r)=>a+r*r,0)/n);
+
+  fit={slope,intercept,r2,std,n};
+
+  const win=Math.max(2,Math.min(7,Math.floor(n/3)));
+  mavgArr=ys.map((_,i)=>{ const s=ys.slice(Math.max(0,i-win+1),i+1); return s.reduce((a,b)=>a+b,0)/s.length; });
+
+  // fit chips (always in kg for scientific clarity)
+  const sw=slope*7, sm=slope*30;
+  document.getElementById('fitChips').innerHTML=`
+    <div class="fit-chip">slope <strong>${slope>=0?'+':''}${slope.toFixed(4)} kg/day</strong></div>
+    <div class="fit-chip">weekly <strong>${sw>=0?'+':''}${sw.toFixed(3)} kg/wk</strong></div>
+    <div class="fit-chip">monthly <strong>${sm>=0?'+':''}${sm.toFixed(2)} kg/mo</strong></div>
+    <div class="fit-chip">R² <strong>${r2.toFixed(4)}</strong></div>
+    <div class="fit-chip">σ <strong>${std.toFixed(3)} kg</strong></div>`;
+  document.getElementById('fitBox').style.display='block';
+}
+
+function renderStats() {
+  const vals=rawData.map(p=>cv(p.value));
+  const delta=vals[vals.length-1]-vals[0];
+  document.getElementById('sCur').textContent=`${vals[vals.length-1].toFixed(1)} ${ul()}`;
+  document.getElementById('sMin').textContent=`${Math.min(...vals).toFixed(1)} ${ul()}`;
+  document.getElementById('sMax').textContent=`${Math.max(...vals).toFixed(1)} ${ul()}`;
+  document.getElementById('sAvg').textContent=`${(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1)} ${ul()}`;
+  const dEl=document.getElementById('sDlt');
+  dEl.textContent=`${delta>=0?'+':''}${delta.toFixed(1)} ${ul()}`;
+  dEl.style.color=delta<0?'var(--accent3)':delta>0?'var(--accent2)':'var(--muted)';
+  document.getElementById('sPts').textContent=rawData.length;
+  document.getElementById('statsRow').style.display='grid';
+}
+
+/* ── DRAW ──────────────────────────────────────────────────────── */
+function draw() {
+  const card=document.getElementById('chartCard');
+  card.style.display='block';
+  const canvas=document.getElementById('wc');
+  const dpr=window.devicePixelRatio||1;
+  const W=card.clientWidth-26, H=250;
+  canvas.style.width=W+'px'; canvas.style.height=H+'px';
+  canvas.width=W*dpr; canvas.height=H*dpr;
+  const ctx=canvas.getContext('2d'); ctx.scale(dpr,dpr);
+
+  const n=rawData.length;
+  const ysKg=rawData.map(p=>p.value);
+  const ysD =ysKg.map(v=>cv(v));                                     // display unit
+  const fitD=ysKg.map((_,i)=>cv(fit.slope*i+fit.intercept));
+  const mavD=mavgArr.map(v=>cv(v));
+  const stdD=cv(fit.std)-cv(0);                                       // std in display unit
+
+  const pad={top:14,right:12,bottom:34,left:50};
+  const cW=W-pad.left-pad.right, cH=H-pad.top-pad.bottom;
+
+  let yMin=Math.min(...ysD,...fitD), yMax=Math.max(...ysD,...fitD);
+  if (layers.band) { yMin-=stdD*1.2; yMax+=stdD*1.2; }
+  const yPad=(yMax-yMin)*.1||.5; yMin-=yPad; yMax+=yPad;
+
+  const xp=i=>pad.left+(i/(n-1))*cW;
+  const yp=v=>pad.top+(1-(v-yMin)/(yMax-yMin))*cH;
+
+  /* grid */
+  ctx.font=`10px 'DM Mono',monospace`;
+  for (let t=0;t<=5;t++) {
+    const v=yMin+(yMax-yMin)*t/5, y=yp(v);
+    ctx.strokeStyle='rgba(31,45,61,.7)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(pad.left-3,y); ctx.lineTo(W-pad.right,y);
+    ctx.globalAlpha=.5; ctx.stroke(); ctx.globalAlpha=1;
+    ctx.fillStyle='#566578'; ctx.textAlign='right';
+    ctx.fillText(v.toFixed(1),pad.left-7,y+4);
+  }
+
+  /* x labels */
+  ctx.textAlign='center'; ctx.fillStyle='#566578';
+  const maxL=Math.min(6,n);
+  for (let k=0;k<maxL;k++) {
+    const i=Math.round(k*(n-1)/(maxL-1));
+    ctx.fillText(rawData[i].date.toLocaleDateString('en-GB',{day:'2-digit',month:'short'}),xp(i),H-pad.bottom+16);
+  }
+
+  /* ±1σ band */
+  if (layers.band && n>2) {
+    ctx.beginPath();
+    for (let i=0;i<n;i++) ctx.lineTo(xp(i),yp(fitD[i]+stdD));
+    for (let i=n-1;i>=0;i--) ctx.lineTo(xp(i),yp(fitD[i]-stdD));
+    ctx.closePath();
+    ctx.fillStyle='rgba(184,255,63,.06)'; ctx.fill();
+    ctx.strokeStyle='rgba(184,255,63,.18)'; ctx.lineWidth=1; ctx.stroke();
+  }
+
+  /* moving avg */
+  if (layers.mavg && n>=2) {
+    ctx.beginPath();
+    mavD.forEach((v,i)=>i?ctx.lineTo(xp(i),yp(v)):ctx.moveTo(xp(i),yp(v)));
+    ctx.strokeStyle='rgba(180,138,255,.85)'; ctx.lineWidth=2; ctx.lineJoin='round';
+    ctx.setLineDash([]); ctx.stroke();
+  }
+
+  /* linear fit */
+  if (layers.fit && n>=2) {
+    ctx.beginPath(); ctx.moveTo(xp(0),yp(fitD[0])); ctx.lineTo(xp(n-1),yp(fitD[n-1]));
+    ctx.strokeStyle='rgba(255,77,109,.95)'; ctx.lineWidth=2.5; ctx.setLineDash([]); ctx.stroke();
+  }
+
+  /* raw line */
+  if (layers.raw && n>=2) {
+    ctx.beginPath();
+    ysD.forEach((v,i)=>i?ctx.lineTo(xp(i),yp(v)):ctx.moveTo(xp(i),yp(v)));
+    ctx.strokeStyle='rgba(0,229,255,.3)'; ctx.lineWidth=1.5; ctx.lineJoin='round';
+    ctx.setLineDash([]); ctx.stroke();
+    /* dots */
+    ysD.forEach((v,i)=>{
+      ctx.beginPath(); ctx.arc(xp(i),yp(v),cidx===i?5.5:3,0,Math.PI*2);
+      ctx.fillStyle=cidx===i?'#00e5ff':'rgba(0,229,255,.72)'; ctx.fill();
+    });
+  }
+
+  /* cursor */
+  if (cidx!==null && cidx>=0 && cidx<n) {
+    const cx=xp(cidx);
+    ctx.beginPath(); ctx.moveTo(cx,pad.top); ctx.lineTo(cx,H-pad.bottom);
+    ctx.strokeStyle='rgba(255,255,255,.14)'; ctx.lineWidth=1; ctx.setLineDash([4,3]); ctx.stroke(); ctx.setLineDash([]);
+
+    if (layers.fit)  { ctx.beginPath(); ctx.arc(cx,yp(fitD[cidx]),5,0,Math.PI*2); ctx.fillStyle='rgba(255,77,109,.95)'; ctx.fill(); }
+    if (layers.mavg) { ctx.beginPath(); ctx.arc(cx,yp(mavD[cidx]),4.5,0,Math.PI*2); ctx.fillStyle='rgba(180,138,255,.9)'; ctx.fill(); }
+
+    /* tooltip */
+    const tt=document.getElementById('tt');
+    document.getElementById('ttDate').textContent=rawData[cidx].date.toLocaleDateString('en-GB',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});
+    document.getElementById('rRaw').style.display =layers.raw ?'flex':'none';
+    document.getElementById('rFit').style.display =layers.fit ?'flex':'none';
+    document.getElementById('rMavg').style.display=layers.mavg?'flex':'none';
+    document.getElementById('rBand').style.display=layers.band?'flex':'none';
+    if (layers.raw)  document.getElementById('vRaw').textContent =`${ysD[cidx].toFixed(2)} ${ul()}`;
+    if (layers.fit)  document.getElementById('vFit').textContent =`${fitD[cidx].toFixed(2)} ${ul()}`;
+    if (layers.mavg) document.getElementById('vMavg').textContent=`${mavD[cidx].toFixed(2)} ${ul()}`;
+    if (layers.band) document.getElementById('vBand').textContent=`±${stdD.toFixed(2)} ${ul()}`;
+
+    const ttW=162, margin=12;
+    tt.style.left=(cx+margin+ttW>W ? cx-ttW-margin : cx+margin)+'px';
+    tt.style.top=(pad.top+6)+'px';
+    tt.style.display='block';
+  } else {
+    document.getElementById('tt').style.display='none';
+  }
+
+  /* legend */
+  const items=[];
+  if(layers.raw)  items.push({c:'rgba(0,229,255,.75)',l:'Raw Data'});
+  if(layers.fit)  items.push({c:'rgba(255,77,109,.95)',l:'Linear Fit'});
+  if(layers.mavg) items.push({c:'rgba(180,138,255,.85)',l:'Moving Avg'});
+  if(layers.band) items.push({c:'rgba(184,255,63,.5)',l:'±1σ Band'});
+  document.getElementById('legend').innerHTML=items.map(x=>`<div class="legend-item"><span class="leg-sw" style="background:${x.c}"></span>${x.l}</div>`).join('');
+}
+
+/* ── CURSOR EVENTS ─────────────────────────────────────────────── */
+function pointerPos(e) {
+  const canvas=document.getElementById('wc');
+  const rect=canvas.getBoundingClientRect();
+  const clientX=e.touches?e.touches[0].clientX:e.clientX;
+  const x=clientX-rect.left;
+  const cW=rect.width-50-12;
+  const frac=Math.max(0,Math.min(1,(x-50)/cW));
+  return Math.round(frac*(rawData.length-1));
+}
+document.getElementById('wc').addEventListener('mousemove', e=>{ if(!rawData.length)return; cidx=pointerPos(e); draw(); });
+document.getElementById('wc').addEventListener('touchmove', e=>{ if(!rawData.length)return; cidx=pointerPos(e); draw(); },{passive:true});
+document.getElementById('wc').addEventListener('mouseleave',()=>{ cidx=null; if(rawData.length)draw(); });
+document.getElementById('wc').addEventListener('touchend',  ()=>{ cidx=null; if(rawData.length)draw(); });
+
+/* ── TABLE ─────────────────────────────────────────────────────── */
+function renderTable() {
+  const tbody=document.getElementById('tableBody');
+  const slice=[...rawData].reverse().slice(0,15);
+  tbody.innerHTML=slice.map((p,i)=>{
+    const v=cv(p.value);
+    const fi=rawData.length-1-i;
+    const fv=cv(fit.slope*fi+fit.intercept);
+    const prev=i<slice.length-1?cv(slice[i+1].value):null;
+    const d=prev!==null?v-prev:null;
+    const dc=d===null?'#566578':d<0?'var(--accent3)':d>0?'var(--accent2)':'var(--muted)';
+    return `<tr>
+      <td>${p.date.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'2-digit'})}</td>
+      <td class="v">${v.toFixed(2)}</td>
+      <td class="fv">${fv.toFixed(2)}</td>
+      <td style="color:${dc}">${d!==null?(d>=0?'+':'')+d.toFixed(2):'—'}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('tableCard').style.display='block';
+}
+
+/* ── RESIZE ────────────────────────────────────────────────────── */
+window.addEventListener('resize',()=>{ if(rawData.length)draw(); });
+
+/* ── SW ────────────────────────────────────────────────────────── */
+if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>
