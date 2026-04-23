@@ -1,1 +1,11 @@
-[]
+[{
+  "relation": [
+    "delegate_permission/common.handle_all_urls",
+    "delegate_permission/common.get_login_creds"
+  ],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.yourname.weightlens",
+    "sha256_cert_fingerprints": ["61:5E:1B:95:7D:55:34:F7:F9:0E:CC:34:19:D8:83:25:4D:CC:B0:05:FA:54:0B:12:B5:1B:0F:EC:E4:D2:20:00"]
+  }
+}]
