@@ -9,6 +9,49 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="description" content="Weight tracker with Health Connect integration" />
   <link rel="manifest" href="manifest.json" />
+  <link rel="manifest" href="manifest.json" />
+<script>
+/* ── Health Connect bridge adapter ── */
+(function(){
+  const NATIVE = typeof window.HealthConnect !== 'undefined';
+  if(!NATIVE) return; // in browser: keep original HealthConnect undefined, demo path works fine
+  const _n = window.HealthConnect;
+  window.HealthConnect = {
+    requestPermission: function(/*ignored*/){
+      return new Promise(function(resolve){
+        window.__hcPermissionResult = function(granted){ window.__hcPermissionResult=null; resolve(!!granted); };
+        _n.requestPermission();
+      });
+    },
+    readRecords: function(recordType, opts){
+      return new Promise(function(resolve, reject){
+        var days = 365;
+        if(opts && opts.timeRangeFilter && opts.timeRangeFilter.startTime){
+          days = Math.ceil((new Date(opts.timeRangeFilter.endTime||Date.now()) - new Date(opts.timeRangeFilter.startTime)) / 86400000);
+        }
+        var cb = '__hcCb' + Date.now();
+        window[cb] = function(jsonStr){
+          window[cb] = null;
+          try{
+            var d = JSON.parse(jsonStr);
+            if(d && d.error){ reject(new Error(d.error)); return; }
+            // re-shape to match what your PWA expects: {time, weight:{inKilograms}}
+            resolve(d.map(function(r){ return {time: r.time, weight:{inKilograms: r.kg}}; }));
+          } catch(e){ reject(e); }
+        };
+        _n.readRecords(days, cb);
+      });
+    },
+    hasPermission: function(){
+      return new Promise(function(resolve){
+        window.__hcHasPermission = function(has){ window.__hcHasPermission=null; resolve(!!has); };
+        _n.hasPermission();
+      });
+    }
+  };
+  console.log('[HC Bridge] Native Android bridge wrapped OK');
+})();
+</script>
   <title>WeightLens</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;800&display=swap" rel="stylesheet" />
