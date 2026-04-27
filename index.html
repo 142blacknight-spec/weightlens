@@ -2669,6 +2669,23 @@ function showEmpty(m){
 }
 function hideEmpty(){document.getElementById('emptyState').style.display='none';}
 window.addEventListener('resize',()=>{if(rawData.length)draw();});
+
+  // Function to call the Android Native Bridge
+function syncWithHealthConnect() {
+    if (window.AndroidBridge) {
+        window.AndroidBridge.requestHealthData();
+    } else {
+        console.log("Not running inside the Android App");
+    }
+}
+
+// Function that the Android App calls back
+window.onHealthDataReceived = function(data) {
+    console.log("Data from Health Connect:", data);
+    // Logic to update your charts/table with 'data'
+    // rawData = data.map(...)
+    // renderTable(); draw();
+};
 </script>
 </body>
 </html>
