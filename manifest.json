@@ -1,25 +1,22 @@
 {
-  "name": "WeightLens",
   "short_name": "WeightLens",
-  "description": "Weight tracker with Health Connect integration",
-  "start_url": "/weightlens/",
-  "scope": "/weightlens/",
-  "display": "standalone",
-  "background_color": "#0b0f14",
-  "theme_color": "#0b0f14",
-  "orientation": "portrait",
+  "name": "WeightLens: Health Connect Analytics",
   "icons": [
     {
-      "src": "/weightlens/weight-scale.png",
-      "sizes": "512x512",
-      "type": "png",
-      "purpose": "any maskable"
+      "src": "icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
     },
     {
-      "src": "/weightlens/weight-scale.png",
-      "sizes": "512x512",
-      "type": "png",
-      "purpose": "any maskable"
+      "src": "icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
     }
-  ]
+  ],
+  "start_url": ".",
+  "background_color": "#0b0f14",
+  "display": "standalone",
+  "scope": "./",
+  "theme_color": "#0b0f14",
+  "description": "Health Connect and Weight Analytics Dashboard."
 }
