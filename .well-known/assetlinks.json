@@ -1,0 +1,1 @@
+[{\n  "relation": [\n    "delegate_permission/common.handle_all_urls",\n    "delegate_permission/common.get_login_creds"\n  ],\n  "target": {\n    "namespace": "android_app",\n    "package_name": "com.yourname.weightlens",\n    "sha256_cert_fingerprints": [\n      "REPLACE_WITH_YOUR_KEYSTORE_SHA256_FINGERPRINT"\n    ]\n  }\n}]
