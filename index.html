@@ -1,0 +1,2680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0b0f14" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="WeightLens" />
+  <meta name="application-name" content="WeightLens" />
+  <meta name="description" content="Weight tracker with Health Connect integration and analytics" />
+  <title>WeightLens</title>
+  <link rel="manifest" href="/weightlens/manifest.json" />
+  <link rel="apple-touch-icon" href="/weightlens/icon-192.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="/weightlens/icon-192.png" />
+  <link rel="icon" type="image/png" sizes="512x512" href="/weightlens/icon-512.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:#0b0f14; --surface:#131820; --surface2:#1a2230; --border:#1f2d3d;
+      --accent:#00e5ff; --accent2:#ff4d6d; --accent3:#b8ff3f; --purple:#b48aff;
+      --text:#e8edf2; --muted:#566578;
+      --font-head:'Syne',sans-serif; --font-mono:'DM Mono',monospace;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html,body{background:var(--bg);color:var(--text);font-family:var(--font-mono);min-height:100vh;overflow-x:hidden}
+    body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,229,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.025) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
+    #app{position:relative;z-index:1;max-width:480px;margin:0 auto;padding:24px 16px 100px}
+
+    header{margin-bottom:18px}
+    .logo{font-family:var(--font-head);font-weight:800;font-size:2rem;letter-spacing:-.03em;background:linear-gradient(135deg,var(--accent),var(--accent3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .logo span{-webkit-text-fill-color:var(--accent2)}
+    .tagline{font-size:.68rem;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin-top:4px}
+
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px 20px;margin-bottom:13px}
+    .section-label{font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:11px}
+
+    /* Status */
+    .status-row{display:flex;align-items:center;gap:10px;padding:9px 14px;background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-bottom:13px}
+    .status-pill{display:inline-flex;align-items:center;gap:6px;font-size:.69rem;padding:4px 10px;border-radius:99px;background:var(--surface2);border:1px solid var(--border);color:var(--muted)}
+    .status-pill.connected{border-color:var(--accent3);color:var(--accent3)}
+    .status-pill .dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0}
+    .status-pill.connected .dot{box-shadow:0 0 6px var(--accent3)}
+    .data-info{margin-left:auto;font-size:.63rem;color:var(--muted);text-align:right}
+
+    /* 4-button grid: all equal size */
+    .action-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:13px}
+    .action-btn{display:flex;align-items:center;justify-content:center;gap:7px;border-radius:11px;padding:11px 10px;font-family:var(--font-mono);font-size:.77rem;cursor:pointer;width:100%;transition:all .2s;font-weight:500;border:1px solid}
+    .action-btn:hover{transform:translateY(-1px)}
+    .btn-hc   {background:linear-gradient(135deg,rgba(0,229,255,.12),rgba(0,229,255,.04));border-color:var(--accent);color:var(--accent)}
+    .btn-hc:hover{background:rgba(0,229,255,.2)}
+    .btn-csv  {background:linear-gradient(135deg,rgba(180,138,255,.12),rgba(180,138,255,.04));border-color:var(--purple);color:var(--purple)}
+    .btn-csv:hover{background:rgba(180,138,255,.2)}
+    .btn-ex   {background:linear-gradient(135deg,rgba(184,255,63,.09),rgba(184,255,63,.03));border-color:var(--accent3);color:var(--accent3)}
+    .btn-ex:hover{background:rgba(184,255,63,.18)}
+    .btn-exp  {background:linear-gradient(135deg,rgba(255,77,109,.09),rgba(255,77,109,.03));border-color:var(--accent2);color:var(--accent2)}
+    .btn-exp:hover{background:rgba(255,77,109,.18)}
+    #csvFileInput{display:none}
+
+    /* Time window */
+    .time-pills{display:flex;gap:7px;flex-wrap:wrap}
+    .pill-btn{background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:7px 13px;font-family:var(--font-mono);font-size:.76rem;cursor:pointer;transition:all .15s}
+    .pill-btn.active{background:rgba(0,229,255,.1);border-color:var(--accent);color:var(--accent)}
+    .date-range{display:flex;gap:9px;margin-top:11px;align-items:center}
+    .date-range input{flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 10px;font-family:var(--font-mono);font-size:.76rem;outline:none}
+    .date-range input:focus{border-color:var(--accent)}
+    .date-range span{color:var(--muted);font-size:.73rem}
+
+    /* Chart layers */
+    .chart-toggles{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .toggle-btn{background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:10px;padding:10px 12px;font-family:var(--font-mono);font-size:.74rem;cursor:pointer;transition:all .15s;text-align:left;display:flex;align-items:center;gap:8px}
+    .toggle-btn.active[data-type="raw"] {border-color:var(--accent); color:var(--accent); background:rgba(0,229,255,.07)}
+    .toggle-btn.active[data-type="fit"] {border-color:var(--accent2);color:var(--accent2);background:rgba(255,77,109,.07)}
+    .toggle-btn.active[data-type="mavg"]{border-color:var(--purple); color:var(--purple); background:rgba(180,138,255,.07)}
+    .mavg-win-row{display:flex;align-items:center;gap:7px;margin-top:10px}
+    .mavg-btn{background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:5px 12px;font-family:var(--font-mono);font-size:.72rem;cursor:pointer;transition:all .15s}
+    .mavg-btn.active{background:rgba(180,138,255,.12);border-color:var(--purple);color:var(--purple)}
+
+    /* Unit */
+    .unit-row{display:flex;gap:8px}
+    .unit-btn{background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:7px 18px;font-family:var(--font-mono);font-size:.79rem;cursor:pointer;transition:all .15s}
+    .unit-btn.active{background:rgba(0,229,255,.1);border-color:var(--accent);color:var(--accent)}
+
+    /* Chart card */
+    .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:15px 13px 12px;margin-bottom:13px;display:none}
+    .chart-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px}
+    .chart-title{font-family:var(--font-head);font-size:.88rem;font-weight:600}
+    .chart-period-label{font-size:.63rem;color:var(--accent);background:rgba(0,229,255,.08);border:1px solid rgba(0,229,255,.18);border-radius:6px;padding:3px 8px;white-space:nowrap}
+    .nav-arrows{display:flex;align-items:center;gap:6px;margin-bottom:7px}
+    .nav-btn{background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:5px 12px;font-family:var(--font-mono);font-size:.78rem;cursor:pointer;transition:all .15s;line-height:1}
+    .nav-btn:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+    .nav-btn:disabled{opacity:.25;cursor:not-allowed}
+    .nav-period-info{flex:1;text-align:center;font-size:.65rem;color:var(--muted)}
+    .chart-wrap{position:relative}
+    canvas{display:block;touch-action:none;cursor:crosshair}
+
+    #tt{position:absolute;background:#0d1117;border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-size:.72rem;pointer-events:none;display:none;z-index:20;min-width:150px;box-shadow:0 8px 28px rgba(0,0,0,.6)}
+    #tt .tt-date{color:var(--muted);font-size:.63rem;margin-bottom:7px;letter-spacing:.05em}
+    #tt .tt-row{display:flex;justify-content:space-between;gap:14px;margin-bottom:3px;align-items:center}
+    #tt .tt-row:last-child{margin-bottom:0}
+    #tt .tt-lbl{color:var(--muted)}
+    #tt .v-raw{color:var(--accent)}
+    #tt .v-fit{color:var(--accent2)}
+    #tt .v-mavg{color:var(--purple)}
+    .legend{display:flex;flex-wrap:wrap;gap:9px;margin-top:10px}
+    .legend-item{display:flex;align-items:center;gap:5px;font-size:.66rem;color:var(--muted)}
+    .leg-sw{width:18px;height:3px;border-radius:2px;flex-shrink:0}
+
+    /* Trend */
+    .trend-box{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 17px;margin-bottom:13px;display:none}
+    .trend-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+    .trend-cell{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 8px;text-align:center}
+    .trend-period{font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.09em;margin-bottom:5px}
+    .trend-val{font-family:var(--font-head);font-size:1rem;font-weight:700}
+    .trend-val.up{color:var(--accent2)}
+    .trend-val.down{color:var(--accent3)}
+    .trend-val.flat{color:var(--muted)}
+
+    /* Stats */
+    .stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:13px}
+    .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 10px;text-align:center}
+    .stat-value{font-family:var(--font-head);font-size:1.05rem;font-weight:600;color:var(--accent)}
+    .stat-label{font-size:.57rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-top:3px}
+
+    /* Table */
+    .data-table{width:100%;border-collapse:collapse;font-size:.73rem}
+    .data-table th{color:var(--muted);font-weight:400;text-align:left;padding:5px 0;border-bottom:1px solid var(--border);font-size:.62rem;letter-spacing:.07em;text-transform:uppercase}
+    .data-table td{padding:7px 0;border-bottom:1px solid rgba(31,45,61,.45)}
+    .data-table tr:last-child td{border-bottom:none}
+    .data-table .v{color:var(--accent)}
+    .data-table .fv{color:var(--accent2)}
+
+    /* Empty state */
+    .empty-state{text-align:center;padding:40px 20px;color:var(--muted);font-size:.79rem;line-height:1.85}
+    .empty-state .big{font-size:2.6rem;margin-bottom:12px}
+
+    /* Export modal */
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px}
+    .modal{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:24px 22px;width:100%;max-width:400px}
+    .modal h2{font-family:var(--font-head);font-size:1.1rem;font-weight:700;margin-bottom:6px}
+    .modal p{font-size:.75rem;color:var(--muted);margin-bottom:18px;line-height:1.6}
+    .modal-info{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:.72rem;color:var(--muted);margin-bottom:18px;line-height:1.7}
+    .modal-info strong{color:var(--text)}
+    .modal-row{display:flex;gap:10px}
+    .modal-btn{flex:1;padding:12px;border-radius:10px;font-family:var(--font-mono);font-size:.82rem;cursor:pointer;font-weight:500;transition:all .2s}
+    .modal-btn-cancel{background:var(--surface2);border:1px solid var(--border);color:var(--muted)}
+    .modal-btn-cancel:hover{border-color:var(--muted)}
+    .modal-btn-export{background:linear-gradient(135deg,rgba(255,77,109,.15),rgba(255,77,109,.06));border:1px solid var(--accent2);color:var(--accent2)}
+    .modal-btn-export:hover{background:rgba(255,77,109,.25)}
+
+    /* HC sync toast */
+    .sync-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 18px;font-size:.75rem;z-index:300;box-shadow:0 8px 28px rgba(0,0,0,.5);max-width:360px;text-align:center;display:none}
+    .sync-toast.show{display:block;animation:fadeInUp .3s ease}
+    @keyframes fadeInUp{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+
+    .spinner{display:inline-block;width:13px;height:13px;border:2px solid rgba(0,229,255,.2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:7px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+  </style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="logo">Weight<span>Lens</span></div>
+    <div class="tagline">Health Connect · Weight Analytics</div>
+  </header>
+
+  <!-- Status -->
+  <div class="status-row">
+    <div class="status-pill" id="statusPill"><span class="dot"></span><span id="statusText">Not connected</span></div>
+    <div class="data-info" id="dataInfo"></div>
+  </div>
+
+  <!-- 4 equal action buttons -->
+  <div class="action-grid">
+    <button class="action-btn btn-hc" onclick="connectHC()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+      Health Connect
+    </button>
+    <button class="action-btn btn-csv" onclick="document.getElementById('csvFileInput').click()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      Load CSV
+    </button>
+    <button class="action-btn btn-exp" onclick="openExportModal()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Export
+    </button>
+    <input type="file" id="csvFileInput" accept=".csv" onchange="loadCSVFile(event)" />
+  </div>
+
+  <!-- Time Window -->
+  <div class="card">
+    <div class="section-label">Time Window</div>
+    <div class="time-pills">
+      <button class="pill-btn" data-days="7">1W</button>
+      <button class="pill-btn active" data-days="30">1M</button>
+      <button class="pill-btn" data-days="90">3M</button>
+      <button class="pill-btn" data-days="180">6M</button>
+      <button class="pill-btn" data-days="365">1Y</button>
+      <button class="pill-btn" data-days="all">All</button>
+      <button class="pill-btn" data-days="custom">Custom</button>
+    </div>
+    <div class="date-range" id="customRange" style="display:none">
+      <input type="date" id="startDate"/>
+      <span>&#8594;</span>
+      <input type="date" id="endDate"/>
+    </div>
+  </div>
+
+  <!-- CHART immediately after time window -->
+  <div class="chart-card" id="chartCard">
+    <div class="chart-header">
+      <div class="chart-title">Weight over time</div>
+      <div class="chart-period-label" id="chartPeriodLabel"></div>
+    </div>
+    <div class="nav-arrows">
+      <button class="nav-btn" id="navLeft"  onclick="navigate(-1)">&#8592; prev</button>
+      <div class="nav-period-info" id="navInfo"></div>
+      <button class="nav-btn" id="navRight" onclick="navigate(+1)">next &#8594;</button>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="wc"></canvas>
+      <div id="tt">
+        <div class="tt-date" id="ttDate"></div>
+        <div class="tt-row" id="rRaw"> <span class="tt-lbl">Raw</span>     <span class="v-raw"  id="vRaw">&#8212;</span></div>
+        <div class="tt-row" id="rFit"> <span class="tt-lbl">Fit</span>     <span class="v-fit"  id="vFit">&#8212;</span></div>
+        <div class="tt-row" id="rMavg"><span class="tt-lbl">Mov.Avg</span> <span class="v-mavg" id="vMavg">&#8212;</span></div>
+      </div>
+    </div>
+    <div class="legend" id="legend"></div>
+  </div>
+
+  <!-- Trend -->
+  <div class="trend-box" id="trendBox">
+    <div class="section-label">Trend (linear fit)</div>
+    <div class="trend-grid">
+      <div class="trend-cell"><div class="trend-period">/ week</div><div class="trend-val" id="trendWeek">&#8212;</div></div>
+      <div class="trend-cell"><div class="trend-period">/ month</div><div class="trend-val" id="trendMonth">&#8212;</div></div>
+      <div class="trend-cell"><div class="trend-period">/ year</div><div class="trend-val" id="trendYear">&#8212;</div></div>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row" id="statsRow" style="display:none">
+    <div class="stat-card"><div class="stat-value" id="sCur">&#8212;</div><div class="stat-label">Current</div></div>
+    <div class="stat-card"><div class="stat-value" id="sMin">&#8212;</div><div class="stat-label">Min</div></div>
+    <div class="stat-card"><div class="stat-value" id="sMax">&#8212;</div><div class="stat-label">Max</div></div>
+    <div class="stat-card"><div class="stat-value" id="sAvg">&#8212;</div><div class="stat-label">Average</div></div>
+    <div class="stat-card"><div class="stat-value" id="sDlt">&#8212;</div><div class="stat-label">Change raw</div></div>
+    <div class="stat-card"><div class="stat-value" id="sDltAvg">&#8212;</div><div class="stat-label">Change avg</div></div>
+  </div>
+
+  <!-- Chart layers -->
+  <div class="card">
+    <div class="section-label">Chart Layers</div>
+    <div class="chart-toggles">
+      <button class="toggle-btn active" data-type="raw"  onclick="toggleLayer(this)">&#11044; Raw Data</button>
+      <button class="toggle-btn active" data-type="fit"  onclick="toggleLayer(this)">&#9585; Linear Fit</button>
+      <button class="toggle-btn active" data-type="mavg" onclick="toggleLayer(this)">&#8776; Moving Avg</button>
+    </div>
+    <div class="mavg-win-row" id="mavgWinRow">
+      <span style="font-size:.63rem;color:var(--muted);margin-right:2px">Avg window:</span>
+      <button class="mavg-btn" data-mavgdays="7">1W</button>
+      <button class="mavg-btn active" data-mavgdays="30">1M</button>
+      <button class="mavg-btn" data-mavgdays="90">3M</button>
+    </div>
+  </div>
+
+  <!-- Unit — after all results -->
+  <div class="card" style="padding:14px 20px">
+    <div class="section-label">Unit</div>
+    <div class="unit-row">
+      <button class="unit-btn active" data-unit="kg"  onclick="setUnit(this)">kg</button>
+      <button class="unit-btn"        data-unit="lbs" onclick="setUnit(this)">lbs</button>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="card" id="tableCard" style="display:none">
+    <div class="section-label">Recent Entries</div>
+    <table class="data-table">
+      <thead><tr><th>Date</th><th>Measured</th><th>Fit</th><th>&#916;</th></tr></thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+
+  <div class="empty-state" id="emptyState">
+    <div class="big">&#9878;</div>
+    Connect Health Connect, load a CSV,<br/>or tap <em>Load Example</em> to preview.
+  </div>
+</div>
+
+<!-- Export modal -->
+<div class="modal-overlay" id="exportModal" style="display:none" onclick="if(event.target===this)closeExportModal()">
+  <div class="modal">
+    <h2>Export Data</h2>
+    <p>Download your weight data as a CSV file compatible with the WeightLens format.</p>
+    <div class="modal-info" id="exportInfo">No data loaded.</div>
+    <div class="modal-row">
+      <button class="modal-btn modal-btn-cancel" onclick="closeExportModal()">Cancel</button>
+      <button class="modal-btn modal-btn-export" onclick="doExport()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download CSV
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Sync toast -->
+<div class="sync-toast" id="syncToast"></div>
+
+<script>
+/* ── Health Connect bridge ── */
+(function(){
+  if(typeof window.HealthConnect==='undefined') return;
+  const _n=window.HealthConnect;
+  window.HealthConnect={
+    requestPermission:function(){
+      return new Promise(function(resolve){
+        window.__hcPermissionResult=function(g){window.__hcPermissionResult=null;resolve(!!g)};
+        _n.requestPermission();
+      });
+    },
+    readRecords:function(rt,opts){
+      return new Promise(function(resolve,reject){
+        var days=36500;
+        if(opts&&opts.timeRangeFilter&&opts.timeRangeFilter.startTime){
+          days=Math.ceil((new Date(opts.timeRangeFilter.endTime||Date.now())-new Date(opts.timeRangeFilter.startTime))/86400000);
+        }
+        var cb='__hcCb'+Date.now();
+        window[cb]=function(s){
+          window[cb]=null;
+          try{var d=JSON.parse(s);if(d&&d.error){reject(new Error(d.error));return;}
+          resolve(d.map(function(r){return{time:r.time,weight:{inKilograms:r.kg}}}));}
+          catch(e){reject(e);}
+        };
+        _n.readRecords(days,cb);
+      });
+    },
+    writeRecords:function(records){
+      return new Promise(function(resolve,reject){
+        var cb='__hcWCb'+Date.now();
+        window[cb]=function(s){
+          window[cb]=null;
+          try{var d=JSON.parse(s);if(d&&d.error){reject(new Error(d.error));return;}resolve(d);}
+          catch(e){reject(e);}
+        };
+        _n.writeRecords(JSON.stringify(records),cb);
+      });
+    },
+    hasPermission:function(){
+      return new Promise(function(resolve){
+        window.__hcHasPermission=function(h){window.__hcHasPermission=null;resolve(!!h)};
+        _n.hasPermission();
+      });
+    }
+  };
+})();
+
+/* ── STATE ── */
+let allData       = [];   // full dataset [{date,value}] kg sorted asc
+let hcData        = [];   // data currently in Health Connect [{date,value}]
+let rawData       = [];   // current filtered view
+let fit           = null;
+let mavgArr       = [];
+let layers        = {raw:true, fit:true, mavg:true};
+let unit          = 'kg';
+let selDays       = 30;
+let mavgDays      = 30;
+let cidx          = null;
+let navOffset     = 0;
+let hcConnected   = false;
+
+/* ── EMBEDDED EXAMPLE DATA ── */
+const EXAMPLE_CSV = `Date,"Weight (kg)","Fat mass (kg)","Bone mass (kg)","Muscle mass (kg)","Hydration (kg)",Comments
+"2026-04-25 08:11:51",80.90,16.02,3.22,61.65,43.93,
+"2026-04-24 05:03:38",81.18,15.92,3.24,62.01,44.23,
+"2026-04-23 05:14:09",80.83,15.43,3.25,62.14,44.36,
+"2026-04-22 05:00:37",81.04,14.88,3.29,62.86,45.01,
+"2026-04-21 04:48:19",82.17,14.97,3.34,63.84,45.86,
+"2026-04-20 04:53:00",81.72,15.17,3.31,63.23,45.31,
+"2026-04-19 08:46:40",81.37,15.27,3.28,62.79,44.92,
+"2026-04-18 06:52:12",81.24,16.00,3.24,61.99,44.21,
+"2026-04-17 05:08:10",80.68,15.29,3.25,62.13,44.35,
+"2026-04-16 04:53:25",81.42,15.68,3.26,62.46,44.62,
+"2026-04-15 05:08:22",80.79,15.47,3.24,62.06,44.28,
+"2026-04-14 04:50:05",81.35,14.60,3.32,63.41,45.53,
+"2026-04-13 04:53:38",81.19,15.34,3.27,62.56,44.72,
+"2026-04-12 06:47:19",79.80,14.88,3.22,61.68,43.99,
+"2026-04-11 08:20:58",79.87,14.99,3.22,61.64,43.95,
+"2026-04-10 05:11:52",81.15,14.91,3.29,62.94,45.08,
+"2026-04-09 05:05:39",81.38,15.05,3.30,63.02,45.13,
+"2026-04-08 04:51:35",81.16,15.02,3.29,62.84,44.98,
+"2026-04-07 05:03:47",81.80,15.40,3.30,63.09,45.17,
+"2026-04-06 06:09:35",81.41,15.18,3.29,62.92,45.04,
+"2026-04-05 07:17:04",80.95,15.10,3.27,62.56,44.74,
+"2026-04-04 09:28:18",80.78,14.77,3.28,62.71,44.89,
+"2026-04-03 06:31:36",81.41,15.07,3.30,63.02,45.14,
+"2026-04-02 05:04:55",81.41,15.59,3.27,62.54,44.69,
+"2026-04-01 04:59:45",81.13,15.29,3.27,62.55,44.72,
+"2026-03-31 05:05:45",80.94,14.95,3.28,62.70,44.87,
+"2026-03-30 04:58:45",81.96,15.24,3.32,63.39,45.44,
+"2026-03-29 10:14:28",80.39,15.02,3.25,62.11,44.35,
+"2026-03-28 05:40:10",80.67,15.42,3.24,62.00,44.23,
+"2026-03-27 05:04:19",80.69,15.36,3.24,62.07,44.30,
+"2026-03-26 04:52:33",81.38,15.24,3.29,62.84,44.97,
+"2026-03-25 04:54:24",80.50,15.09,3.25,62.14,44.38,
+"2026-03-24 04:36:01",80.40,15.13,3.24,62.01,44.26,
+"2026-03-20 05:20:08",81.16,14.88,3.29,62.98,45.12,
+"2026-03-19 05:03:07",81.46,15.21,3.29,62.94,45.05,
+"2026-03-18 05:01:01",81.51,14.99,3.31,63.20,45.30,
+"2026-03-17 04:15:04",80.42,15.29,3.23,61.89,44.15,
+"2026-03-16 04:50:51",81.54,15.30,3.29,62.93,45.04,
+"2026-03-15 12:07:45",79.87,14.43,3.25,62.17,44.45,
+"2026-03-14 07:01:07",81.37,15.52,3.27,62.56,44.71,
+"2026-03-13 05:01:26",80.93,15.56,3.24,62.11,44.33,
+"2026-03-12 04:50:03",81.37,15.12,3.29,62.94,45.07,
+"2026-03-11 04:46:19",80.94,14.91,3.28,62.73,44.90,
+"2026-03-10 04:56:53",80.78,14.70,3.28,62.78,44.96,
+"2026-03-09 04:43:31",81.00,15.28,3.26,62.44,44.62,
+"2026-03-08 07:53:08",80.40,14.71,3.26,62.41,44.64,
+"2026-03-07 07:26:12",80.79,14.68,3.29,62.82,44.99,
+"2026-03-06 04:59:27",80.78,14.85,3.28,62.64,44.83,
+"2026-03-05 04:47:31",81.13,14.75,3.30,63.07,45.21,
+"2026-03-04 04:57:01",80.96,14.70,3.29,62.95,45.11,
+"2026-03-03 04:42:53",80.66,14.76,3.27,62.61,44.81,
+"2026-03-02 04:37:17",80.67,15.09,3.26,62.31,44.52,
+"2026-03-01 07:46:29",80.89,14.98,3.27,62.62,44.80,
+"2026-02-28 08:08:04",80.15,15.13,3.23,61.78,44.06,
+"2026-02-27 04:40:28",80.51,15.05,3.25,62.19,44.42,
+"2026-02-26 04:35:20",81.38,14.79,3.31,63.27,45.38,
+"2026-02-25 04:58:44",80.97,15.07,3.27,62.61,44.78,
+"2026-02-24 05:06:18",80.01,14.51,3.25,62.23,44.49,
+"2026-02-23 04:59:22",80.23,14.73,3.25,62.23,44.48,
+"2026-02-22 07:40:40",79.78,14.74,3.23,61.79,44.09,
+"2026-02-21 10:02:56",79.59,15.02,3.21,61.34,43.69,
+"2026-02-20 05:17:23",80.02,14.38,3.26,62.36,44.62,
+"2026-02-19 05:03:52",80.58,14.71,3.27,62.58,44.79,
+"2026-02-18 04:51:13",80.91,14.71,3.29,62.90,45.07,
+"2026-02-17 04:58:44",80.05,14.65,3.25,62.14,44.41,
+"2026-02-16 04:55:27",81.17,14.55,3.31,63.30,45.44,
+"2026-02-15 07:45:32",80.68,15.03,3.26,62.38,44.59,
+"2026-02-14 08:16:52",80.66,15.01,3.26,62.38,44.58,
+"2026-02-13 04:54:03",81.14,15.00,3.29,62.84,44.99,
+"2026-02-12 04:58:05",81.07,14.48,3.31,63.26,45.41,
+"2026-02-11 04:54:26",80.60,14.86,3.27,62.46,44.66,
+"2026-02-10 04:39:06",80.80,14.82,3.28,62.69,44.88,
+"2026-02-09 05:11:59",80.66,14.62,3.28,62.75,44.94,
+"2026-02-08 09:33:22",79.89,14.30,3.26,62.31,44.59,
+"2026-02-07 08:25:50",80.59,13.68,3.34,63.56,45.80,
+"2026-02-06 04:47:39",81.00,14.76,3.29,62.93,45.09,
+"2026-02-05 05:06:38",80.80,14.38,3.30,63.10,45.28,
+"2026-02-03 04:53:02",80.75,14.25,3.31,63.18,45.37,
+"2026-02-02 04:52:11",79.89,14.50,3.25,62.12,44.40,
+"2026-02-01 09:06:24",80.45,13.92,3.31,63.20,45.44,
+"2026-01-31 08:32:37",79.94,14.37,3.26,62.30,44.57,
+"2026-01-30 04:55:52",80.20,14.60,3.26,62.32,44.57,
+"2026-01-29 04:44:31",80.62,14.34,3.30,62.97,45.17,
+"2026-01-28 04:49:18",80.92,14.49,3.30,63.11,45.27,
+"2026-01-27 04:47:39",80.40,14.48,3.28,62.63,44.86,
+"2026-01-26 04:36:05",80.57,14.48,3.29,62.79,44.99,
+"2026-01-25 08:45:35",79.62,14.39,3.24,61.97,44.28,
+"2026-01-24 07:39:49",80.16,14.22,3.28,62.65,44.90,
+"2026-01-23 04:53:07",79.79,14.26,3.26,62.26,44.55,
+"2026-01-22 04:46:32",79.85,14.23,3.26,62.34,44.63,
+"2026-01-21 05:19:37",80.40,14.30,3.29,62.80,45.02,
+"2026-01-20 04:51:42",79.80,14.23,3.26,62.29,44.58,
+"2026-01-19 04:59:45",80.36,,,,,
+"2026-01-18 08:35:33",80.23,14.54,3.26,62.41,44.65,
+"2026-01-17 07:05:05",80.68,15.01,3.26,62.39,44.60,
+"2026-01-16 04:59:27",80.66,14.60,3.28,62.75,44.95,
+"2026-01-15 04:54:29",80.48,14.03,3.31,63.13,45.35,
+"2026-01-14 04:58:58",80.54,14.49,3.28,62.75,44.95,
+"2026-01-13 04:34:57",79.62,14.28,3.25,62.07,44.38,
+"2026-01-12 04:47:40",80.21,15.02,3.24,61.94,44.21,
+"2026-01-11 10:07:58",79.32,14.80,3.20,61.30,43.67,
+"2026-01-10 09:01:11",79.80,14.06,3.27,62.46,44.75,
+"2026-01-09 05:00:11",80.06,14.26,3.27,62.51,44.77,
+"2026-01-08 05:16:38",79.68,14.05,3.26,62.35,44.65,
+"2026-01-07 04:51:27",80.29,14.34,3.28,62.66,44.90,
+"2026-01-06 06:05:49",80.35,14.20,3.29,62.85,45.08,
+"2026-01-05 05:34:07",79.56,14.66,3.22,61.67,43.99,
+"2026-01-04 09:15:57",79.29,14.51,3.22,61.54,43.90,
+"2026-01-03 10:10:48",78.98,14.48,3.20,61.29,43.68,
+"2026-01-02 11:15:57",79.10,14.75,3.20,61.13,43.53,
+"2026-01-01 04:35:00",80.44,13.83,3.32,63.28,45.52,
+"2025-12-31 09:47:24",79.72,14.97,3.22,61.52,43.85,
+"2025-12-30 08:32:55",79.25,15.15,3.18,60.89,43.31,
+"2025-12-29 05:20:07",79.29,14.85,3.20,61.23,43.60,
+"2025-12-28 05:41:08",80.26,14.28,3.28,62.68,44.92,
+"2025-12-27 07:52:44",79.24,15.12,3.18,60.93,43.34,
+"2025-12-26 09:13:12",78.67,14.14,3.21,61.31,43.72,
+"2025-12-25 07:48:41",79.99,14.35,3.26,62.36,44.63,
+"2025-12-24 06:12:05",80.34,14.75,3.26,62.31,44.55,
+"2025-12-23 06:08:45",80.71,14.42,3.30,62.97,45.16,
+"2025-12-22 05:17:31",81.03,14.77,3.29,62.95,45.10,
+"2025-12-21 07:51:34",79.82,14.17,3.26,62.37,44.66,
+"2025-12-20 06:22:14",80.41,14.30,3.29,62.81,45.04,
+"2025-12-19 05:04:24",80.49,14.27,3.29,62.90,45.12,
+"2025-12-18 05:32:06",80.05,14.45,3.26,62.32,44.59,
+"2025-12-17 05:24:12",79.74,14.39,3.25,62.09,44.38,
+"2025-12-16 05:18:12",79.34,14.30,3.23,61.79,44.13,
+"2025-12-15 05:20:49",79.01,14.06,3.23,61.71,44.09,
+"2025-12-14 08:13:27",78.66,14.16,3.21,61.29,43.70,
+"2025-12-13 10:00:54",78.49,14.72,3.17,60.58,43.06,
+"2025-12-12 05:12:08",79.93,14.20,3.27,62.44,44.72,
+"2025-12-11 04:52:14",81.10,14.63,3.31,63.16,45.30,
+"2025-12-10 04:53:46",80.50,14.78,3.27,62.44,44.66,
+"2025-12-09 04:54:09",79.70,14.50,3.24,61.95,44.25,
+"2025-12-08 05:21:14",79.14,14.67,3.20,61.25,43.64,
+"2025-12-07 07:58:12",79.66,13.76,3.28,62.61,44.92,
+"2025-12-06 08:05:20",79.49,13.96,3.26,62.26,44.58,
+"2025-12-05 05:08:00",80.27,14.77,3.25,62.23,44.48,
+"2025-12-04 04:44:38",79.95,14.49,3.25,62.19,44.47,
+"2025-12-03 05:09:23",80.76,14.09,3.32,63.34,45.53,
+"2025-12-02 04:54:43",80.39,14.14,3.30,62.94,45.17,
+"2025-12-01 04:59:52",79.36,14.72,3.21,61.42,43.77,
+"2025-11-30 07:49:37",79.41,,,,,
+"2025-11-29 05:39:27",78.83,14.00,3.22,61.59,43.98,
+"2025-11-28 05:05:11",79.04,14.64,3.20,61.19,43.58,
+"2025-11-27 04:52:31",80.30,14.44,3.27,62.57,44.81,
+"2025-11-26 04:44:33",79.88,14.17,3.27,62.43,44.71,
+"2025-11-25 04:52:54",79.69,14.87,3.22,61.59,43.91,
+"2025-11-24 04:51:21",78.89,14.31,3.21,61.36,43.75,
+"2025-11-23 07:31:08",79.58,14.32,3.24,62.00,44.31,
+"2025-11-22 07:22:21",79.51,14.20,3.25,62.04,44.36,
+"2025-11-21 04:44:38",79.55,14.74,3.22,61.57,43.91,
+"2025-11-20 04:45:25",79.64,14.76,3.22,61.63,43.96,
+"2025-11-19 04:53:51",79.53,14.56,3.23,61.73,44.05,
+"2025-11-18 04:44:05",79.53,14.25,3.24,62.02,44.34,
+"2025-11-17 04:45:01",79.45,14.03,3.25,62.15,44.48,
+"2025-11-16 07:50:28",79.49,14.02,3.26,62.19,44.52,
+"2025-11-15 07:29:34",79.17,13.58,3.26,62.31,44.68,
+"2025-11-14 04:50:13",79.13,14.52,3.21,61.39,43.76,
+"2025-11-13 05:07:29",79.59,14.55,3.23,61.79,44.11,
+"2025-11-12 04:54:27",79.55,14.60,3.23,61.71,44.04,
+"2025-11-11 05:02:12",79.78,14.20,3.26,62.30,44.60,
+"2025-11-10 05:05:35",79.98,14.84,3.23,61.88,44.17,
+"2025-11-09 07:16:44",79.73,13.99,3.27,62.45,44.75,
+"2025-11-08 07:30:30",79.04,14.16,3.22,61.64,44.01,
+"2025-11-07 04:46:01",79.78,14.78,3.23,61.75,44.06,
+"2025-11-06 04:37:30",79.72,14.40,3.25,62.06,44.36,
+"2025-11-05 04:51:09",79.70,15.00,3.21,61.47,43.81,
+"2025-11-04 05:03:33",79.35,14.53,3.22,61.58,43.93,
+"2025-11-03 05:07:25",79.78,14.23,3.26,62.27,44.56,
+"2025-11-02 06:51:54",78.59,14.23,3.20,61.15,43.57,
+"2025-11-01 08:12:41",79.43,13.87,3.26,62.28,44.61,
+"2025-10-31 04:55:45",78.62,14.12,3.21,61.28,43.70,
+"2025-10-30 05:00:26",78.71,14.08,3.21,61.40,43.81,
+"2025-10-29 04:55:11",78.72,14.48,3.19,61.03,43.46,
+"2025-10-28 04:49:49",78.22,14.21,3.18,60.81,43.28,
+"2025-10-27 04:51:14",78.72,13.92,3.22,61.56,43.96,
+"2025-10-26 07:37:09",78.95,14.24,3.22,61.48,43.87,
+"2025-10-25 07:55:35",79.26,13.97,3.25,62.03,44.38,
+"2025-10-24 04:54:58",79.44,14.15,3.25,62.03,44.36,
+"2025-10-23 05:01:44",80.07,14.00,3.29,62.76,45.03,
+"2025-10-22 04:42:32",79.97,14.60,3.25,62.11,44.39,
+"2025-10-21 04:48:32",78.78,14.91,3.17,60.68,43.13,
+"2025-10-20 05:29:00",78.17,14.40,3.17,60.59,43.07,
+"2025-10-19 08:30:13",78.23,14.66,3.16,60.39,42.90,
+"2025-10-18 10:05:46",77.50,14.20,3.15,60.14,42.70,
+"2025-10-10 03:03:48",79.36,13.42,3.28,62.63,45.00,
+"2025-10-09 04:53:55",79.10,13.56,3.26,62.26,44.64,
+"2025-10-08 04:50:19",79.56,14.08,3.26,62.20,44.52,
+"2025-10-07 04:56:14",79.47,14.23,3.24,61.98,44.31,
+"2025-10-06 05:09:05",78.63,13.95,3.21,61.45,43.86,
+"2025-10-05 08:25:46",78.91,13.51,3.25,62.13,44.53,
+"2025-10-04 07:20:33",78.67,13.49,3.24,61.92,44.34,
+"2025-10-03 05:46:39",77.35,13.13,3.19,61.00,43.56,
+"2025-10-02 05:07:55",77.95,13.52,3.20,61.22,43.70,
+"2025-10-01 04:50:10",78.23,13.31,3.23,61.67,44.14,
+"2025-09-30 05:18:59",78.14,13.41,3.22,61.49,43.96,
+"2025-09-29 05:08:52",77.62,13.40,3.19,61.01,43.53,
+"2025-09-28 06:13:43",77.27,13.12,3.19,60.95,43.51,
+"2025-09-27 04:57:41",77.04,12.79,3.20,61.04,43.64,
+"2025-09-26 04:51:23",77.96,13.21,3.22,61.52,44.01,
+"2025-09-25 04:24:30",78.85,12.95,3.29,62.61,45.07,
+"2025-09-24 04:47:22",77.89,13.35,3.21,61.31,43.81,
+"2025-09-23 05:08:05",78.13,13.79,3.20,61.13,43.59,
+"2025-09-22 04:54:36",77.68,13.72,3.18,60.77,43.28,
+"2025-09-21 06:54:20",77.67,14.09,3.16,60.41,42.94,
+"2025-09-20 07:25:12",77.42,13.64,3.17,60.59,43.13,
+"2025-09-19 05:17:26",78.24,13.64,3.21,61.37,43.83,
+"2025-09-18 05:38:42",77.91,13.55,3.20,61.14,43.63,
+"2025-09-17 05:17:08",77.54,13.19,3.20,61.13,43.66,
+"2025-09-12 05:31:35",78.84,13.59,3.25,61.98,44.38,
+"2025-09-11 05:09:03",78.24,13.25,3.23,61.74,44.21,
+"2025-09-10 04:55:06",78.14,13.58,3.21,61.34,43.81,
+"2025-09-09 04:53:00",77.94,13.54,3.20,61.18,43.67,
+"2025-09-08 05:00:32",77.75,13.89,3.17,60.67,43.18,
+"2025-09-07 05:47:36",78.27,13.75,3.21,61.29,43.75,
+"2025-09-06 07:36:22",78.40,13.29,3.24,61.85,44.31,
+"2025-09-05 05:12:18",79.22,13.43,3.28,62.50,44.87,
+"2025-09-04 04:49:02",77.79,13.60,3.19,60.98,43.48,
+"2025-09-03 04:57:24",78.68,13.48,3.24,61.93,44.35,
+"2025-09-02 05:12:18",78.14,13.22,3.23,61.68,44.16,
+"2025-09-01 05:04:07",78.33,14.17,3.19,60.96,43.41,
+"2025-08-31 06:32:44",78.06,13.58,3.21,61.26,43.74,
+"2025-08-30 05:10:04",77.86,13.26,3.21,61.37,43.87,
+"2025-08-29 04:54:41",78.16,13.16,3.24,61.75,44.23,
+"2025-08-28 04:58:11",77.92,13.74,3.19,60.97,43.46,
+"2025-08-27 04:44:44",77.48,13.58,3.18,60.71,43.24,
+"2025-08-26 04:47:12",77.77,13.33,3.21,61.22,43.73,
+"2025-08-25 04:51:43",78.05,,,,,
+"2025-08-24 05:43:43",78.28,13.75,3.21,61.31,43.76,
+"2025-08-23 05:09:31",77.46,13.96,3.16,60.32,42.87,
+"2025-08-22 04:50:18",77.53,13.43,3.19,60.90,43.43,
+"2025-08-21 04:50:13",77.61,13.44,3.19,60.96,43.48,
+"2025-08-20 04:43:00",78.17,13.61,3.21,61.33,43.79,
+"2025-08-19 04:56:15",78.52,14.00,3.21,61.30,43.72,
+"2025-08-18 05:13:17",78.11,13.99,3.19,60.92,43.39,
+"2025-08-17 07:13:29",78.46,13.16,3.25,62.04,44.50,
+"2025-08-16 08:09:14",77.80,13.00,3.23,61.55,44.08,
+"2025-08-15 04:50:51",78.49,13.62,3.23,61.62,44.05,
+"2025-08-14 05:12:00",78.43,14.07,3.20,61.14,43.58,
+"2025-08-13 04:44:13",78.87,13.73,3.24,61.88,44.27,
+"2025-08-12 04:33:02",78.92,13.64,3.25,62.02,44.41,
+"2025-08-11 04:56:59",79.49,14.17,3.25,62.06,44.39,
+"2025-08-10 05:26:02",79.75,13.89,3.28,62.57,44.87,
+"2025-08-09 06:38:14",78.77,13.21,3.26,62.28,44.71,
+"2025-08-08 04:46:20",78.62,14.00,3.21,61.39,43.81,
+"2025-08-07 05:18:40",78.33,13.82,3.21,61.29,43.74,
+"2025-08-06 04:34:21",79.39,14.17,3.24,61.96,44.30,
+"2025-08-05 04:56:17",78.82,14.27,3.21,61.33,43.74,
+"2025-08-04 04:52:58",79.25,14.41,3.22,61.60,43.96,
+"2025-08-03 06:40:32",78.50,13.63,3.23,61.62,44.06,
+"2025-08-02 06:47:36",78.47,13.49,3.23,61.74,44.18,
+"2025-08-01 04:58:13",78.62,13.81,3.22,61.58,43.99,
+"2025-07-31 04:44:31",78.50,13.96,3.21,61.32,43.75,
+"2025-07-30 05:06:07",79.05,14.18,3.22,61.63,44.00,
+"2025-07-29 04:47:33",78.77,14.04,3.22,61.50,43.91,
+"2025-07-28 04:48:43",78.74,13.81,3.23,61.69,44.09,
+"2025-07-27 06:53:19",79.00,13.25,3.28,62.46,44.88,
+"2025-07-26 06:29:25",79.02,14.25,3.22,61.53,43.91,
+"2025-07-25 04:41:33",79.15,13.84,3.25,62.05,44.41,
+"2025-07-24 04:41:41",79.12,14.68,3.20,61.22,43.61,
+"2025-07-23 04:35:44",78.90,13.98,3.23,61.68,44.07,
+"2025-07-22 04:58:08",78.78,14.88,3.17,60.71,43.16,
+"2025-07-21 04:45:53",79.16,14.58,3.21,61.36,43.74,
+"2025-07-20 07:59:22",79.54,14.36,3.24,61.93,44.25,
+"2025-07-19 07:28:01",78.86,14.87,3.18,60.79,43.24,
+"2025-07-18 05:08:13",79.11,14.71,3.20,61.19,43.58,
+"2025-07-17 04:46:53",79.27,14.38,3.22,61.65,44.00,
+"2025-07-16 04:55:40",79.79,14.93,3.22,61.62,43.95,
+"2025-07-15 05:10:17",80.69,14.43,3.29,62.95,45.14,
+"2025-07-14 04:49:11",79.54,15.17,3.20,61.16,43.54,
+"2025-07-13 08:26:40",78.87,14.29,3.21,61.36,43.76,
+"2025-07-12 08:27:27",78.39,14.33,3.18,60.87,43.32,
+"2025-07-11 04:47:32",79.73,15.03,3.21,61.47,43.81,
+"2025-07-10 04:46:42",79.98,14.33,3.26,62.37,44.64,
+"2025-07-09 05:03:18",79.30,14.77,3.20,61.31,43.68,
+"2025-07-08 04:41:41",79.27,15.02,3.19,61.04,43.45,
+"2025-07-07 05:02:55",79.59,15.78,3.17,60.62,43.09,
+"2025-07-06 08:21:41",79.70,14.97,3.21,61.50,43.84,
+"2025-07-05 07:22:10",79.68,15.20,3.20,61.26,43.63,
+"2025-07-04 04:59:41",80.46,14.68,3.27,62.50,44.72,
+"2025-07-03 05:03:05",79.08,14.42,3.21,61.43,43.81,
+"2025-07-02 04:52:09",79.41,14.30,3.23,61.85,44.19,
+"2025-07-01 04:52:08",79.34,14.73,3.21,61.38,43.75,
+"2025-06-30 05:04:07",79.64,14.70,3.23,61.70,44.03,
+"2025-06-29 09:18:35",79.47,14.82,3.21,61.42,43.78,
+"2025-06-28 06:50:29",79.87,14.40,3.25,62.20,44.49,
+"2025-06-27 04:56:36",79.76,14.60,3.24,61.90,44.21,
+"2025-06-26 05:09:08",80.36,14.68,3.26,62.40,44.63,
+"2025-06-25 04:35:20",80.43,15.12,3.24,62.05,44.31,
+"2025-06-24 04:34:56",79.77,15.02,3.21,61.52,43.85,
+"2025-06-23 05:04:49",80.39,14.78,3.26,62.34,44.58,
+"2025-06-22 08:27:04",80.96,15.18,3.27,62.51,44.69,
+"2025-06-21 06:05:04",81.64,14.66,3.33,63.63,45.72,
+"2025-06-20 06:05:46",80.65,15.29,3.24,62.10,44.34,
+"2025-06-19 06:09:44",80.31,14.96,3.25,62.09,44.35,
+"2025-06-18 04:50:29",81.14,15.36,3.26,62.49,44.67,
+"2025-06-17 04:53:03",80.99,14.98,3.28,62.72,44.89,
+"2025-06-16 04:57:30",81.13,14.63,3.31,63.18,45.32,
+"2025-06-15 07:21:06",81.32,15.08,3.29,62.93,45.07,
+"2025-06-14 04:34:25",81.71,15.86,3.27,62.57,44.71,
+"2025-06-13 04:57:35",80.61,15.30,3.24,62.05,44.30,
+"2025-06-12 05:12:33",80.81,15.90,3.22,61.67,43.96,
+"2025-06-11 04:53:02",80.81,15.04,3.27,62.49,44.69,
+"2025-06-10 05:00:10",81.12,15.28,3.27,62.56,44.73,
+"2025-06-09 05:17:34",81.29,16.05,3.24,61.98,44.22,
+"2025-06-08 09:15:48",80.61,15.59,3.23,61.78,44.06,
+"2025-06-07 08:59:07",81.09,15.70,3.25,62.13,44.35,
+"2025-06-06 04:38:59",81.82,16.05,3.26,62.49,44.65,
+"2025-06-05 04:35:08",81.68,15.31,3.30,63.05,45.15,
+"2025-06-04 05:08:56",81.58,14.99,3.31,63.27,45.36,
+"2025-06-03 04:34:42",81.04,15.44,3.26,62.32,44.52,
+"2025-06-02 04:57:10",82.26,16.09,3.28,62.88,44.97,
+"2025-06-01 06:19:08",81.91,15.92,3.27,62.70,44.82,
+"2025-05-24 06:08:12",81.26,15.48,3.26,62.50,44.67,
+"2025-05-23 04:55:51",81.22,15.27,3.27,62.66,44.82,
+"2025-05-22 04:47:39",81.47,15.58,3.27,62.60,44.75,
+"2025-05-21 05:11:35",81.80,15.17,3.31,63.30,45.38,
+"2025-05-20 05:05:31",81.07,15.24,3.27,62.54,44.72,
+"2025-05-19 04:59:55",81.74,15.69,3.28,62.75,44.88,
+"2025-05-18 06:34:45",81.56,15.95,3.26,62.35,44.53,
+"2025-05-17 07:30:05",81.23,15.76,3.25,62.21,44.42,
+"2025-05-16 04:58:01",81.57,15.20,3.30,63.06,45.17,
+"2025-05-15 05:11:19",82.06,15.63,3.30,63.11,45.19,
+"2025-05-14 04:58:09",82.33,16.31,3.27,62.73,44.84,
+"2025-05-13 05:01:31",81.49,15.59,3.27,62.61,44.76,
+"2025-05-12 05:11:30",81.87,15.36,3.30,63.20,45.27,
+"2025-05-11 06:38:27",81.87,16.56,3.24,62.06,44.28,
+"2025-05-10 06:27:48",81.56,16.64,3.22,61.69,43.98,
+"2025-05-09 05:11:48",82.50,16.42,3.28,62.78,44.88,
+"2025-05-08 04:58:22",82.19,14.88,3.35,63.95,45.97,
+"2025-05-06 05:04:37",82.22,15.97,3.29,62.95,45.03,
+"2025-05-05 05:09:39",82.71,15.95,3.31,63.43,45.44,
+"2025-05-04 07:46:42",82.16,15.20,3.33,63.61,45.64,
+"2025-05-03 08:39:11",82.05,15.44,3.31,63.29,45.35,
+"2025-05-02 08:21:40",81.27,16.03,3.24,61.99,44.23,
+"2025-05-01 06:35:51",81.76,15.51,3.29,62.95,45.05,
+"2025-04-30 05:06:01",81.98,15.81,3.28,62.87,44.97,
+"2025-04-29 05:25:57",81.99,15.59,3.30,63.09,45.17,
+"2025-04-28 05:18:35",82.30,15.60,3.31,63.37,45.41,
+"2025-04-27 07:07:24",82.08,16.18,3.27,62.62,44.75,
+"2025-04-26 08:29:54",81.68,15.19,3.30,63.17,45.26,
+"2025-04-25 04:51:56",82.31,15.38,3.32,63.59,45.61,
+"2025-04-24 05:09:26",82.47,16.56,3.27,62.62,44.75,
+"2025-04-23 05:30:44",82.67,15.34,3.35,63.97,45.94,
+"2025-04-22 04:44:26",82.64,16.48,3.28,62.86,44.94,
+"2025-04-21 07:11:54",83.20,15.52,3.36,64.30,46.21,
+"2025-04-20 07:36:34",82.93,15.03,3.38,64.50,46.43,
+"2025-04-19 07:13:31",83.18,14.56,3.42,65.18,47.11,
+"2025-04-18 07:39:04",82.74,15.89,3.32,63.52,45.51,
+"2025-04-17 04:54:43",83.11,16.10,3.33,63.67,45.63,
+"2025-04-16 05:06:24",82.98,16.21,3.31,63.44,45.44,
+"2025-04-15 05:01:04",82.35,15.64,3.31,63.39,45.42,
+"2025-04-14 05:11:55",83.25,16.43,3.31,63.49,45.47,
+"2025-04-13 07:54:25",83.14,15.96,3.33,63.83,45.77,
+"2025-04-12 08:17:02",82.96,16.32,3.31,63.33,45.34,
+"2025-04-11 05:02:07",82.82,16.77,3.28,62.76,44.87,
+"2025-04-10 04:52:28",82.48,16.71,3.26,62.49,44.64,
+"2025-04-09 05:01:31",82.44,16.26,3.28,62.88,44.97,
+"2025-04-08 04:55:44",82.93,16.16,3.31,63.44,45.43,
+"2025-04-04 06:15:07",83.13,,,,,
+"2025-04-03 04:56:03",83.62,16.47,3.33,63.80,45.73,
+"2025-04-02 04:33:56",83.45,16.07,3.34,64.02,45.93,
+"2025-04-01 05:07:01",83.85,15.73,3.39,64.72,46.55,
+"2025-03-31 04:42:23",83.67,15.78,3.37,64.51,46.36,
+"2025-03-30 07:58:26",84.21,15.92,3.39,64.88,46.67,
+"2025-03-29 08:56:35",83.58,16.53,3.33,63.72,45.66,
+"2025-03-28 04:50:16",83.62,16.06,3.35,64.18,46.07,
+"2025-03-27 05:03:00",83.33,16.36,3.32,63.64,45.60,
+"2025-03-26 04:57:04",83.27,15.91,3.34,63.99,45.92,
+"2025-03-25 04:44:08",82.54,16.14,3.29,63.10,45.15,
+"2025-03-24 04:53:06",82.82,16.01,3.32,63.47,45.47,
+"2025-03-23 08:01:12",83.38,16.55,3.31,63.50,45.48,
+"2025-03-22 08:13:05",83.72,15.93,3.37,64.41,46.27,
+"2025-03-20 05:04:19",82.59,16.40,3.28,62.89,44.97,
+"2025-03-19 05:21:21",82.45,16.19,3.29,62.96,45.03,
+"2025-03-18 04:58:40",83.47,16.13,3.34,63.98,45.90,
+"2025-03-17 05:13:12",83.11,15.57,3.36,64.16,46.09,
+"2025-03-16 07:02:55",83.47,15.97,3.35,64.14,46.03,
+"2025-03-15 08:11:32",82.51,15.54,3.33,63.63,45.64,
+"2025-03-14 04:55:37",83.78,15.85,3.38,64.55,46.39,
+"2025-03-13 04:52:33",83.53,16.05,3.35,64.12,46.01,
+"2025-03-12 04:52:31",82.71,15.94,3.31,63.44,45.45,
+"2025-03-11 04:51:37",82.65,15.90,3.31,63.42,45.43,
+"2025-03-10 05:17:14",82.89,15.94,3.32,63.61,45.59,
+"2025-03-09 08:43:13",83.23,15.93,3.34,63.94,45.87,
+"2025-03-08 09:53:40",83.10,15.88,3.34,63.86,45.81,
+"2025-03-07 05:07:11",83.01,15.79,3.34,63.87,45.82,
+"2025-03-06 05:08:31",82.50,16.42,3.28,62.79,44.89,
+"2025-03-05 05:07:50",82.27,15.88,3.29,63.08,45.15,
+"2025-03-04 04:57:56",82.40,15.27,3.34,63.79,45.79,
+"2025-03-03 04:53:29",82.54,15.94,3.31,63.29,45.32,
+"2025-03-02 08:39:28",81.23,15.47,3.26,62.48,44.66,
+"2025-03-01 09:44:13",82.02,16.30,3.26,62.44,44.60,
+"2025-02-27 05:10:06",82.45,15.49,3.33,63.62,45.63,
+"2025-02-26 05:10:51",82.62,14.94,3.37,64.30,46.27,
+"2025-02-25 05:09:13",82.22,15.42,3.32,63.47,45.51,
+"2025-02-24 05:20:37",81.88,15.91,3.27,62.69,44.82,
+"2025-02-23 09:47:25",81.09,,,,,
+"2025-02-22 08:22:51",81.72,16.40,3.24,62.07,44.30,
+"2025-02-21 08:38:09",81.48,15.83,3.26,62.39,44.57,
+"2025-02-20 08:30:51",81.72,17.03,3.21,61.46,43.82,
+"2025-02-19 08:25:26",82.40,16.03,3.29,63.06,45.13,
+"2025-02-18 06:52:18",81.62,16.07,3.25,62.29,44.48,
+"2025-02-17 06:44:03",81.88,16.09,3.26,62.51,44.66,
+"2025-02-16 07:52:17",81.31,16.92,3.20,61.18,43.59,
+"2025-02-15 08:48:41",80.70,14.36,3.30,63.02,45.22,
+"2025-02-14 05:19:57",81.26,15.16,3.28,62.80,44.95,
+"2025-02-12 05:10:23",82.22,15.57,3.31,63.33,45.38,
+"2025-02-11 04:53:34",82.20,15.67,3.30,63.22,45.27,
+"2025-02-10 05:14:39",82.18,15.12,3.33,63.71,45.74,
+"2025-02-09 08:37:25",81.82,15.45,3.29,63.06,45.15,
+"2025-02-08 11:46:58",81.29,15.36,3.27,62.64,44.80,
+"2025-02-07 05:15:59",81.44,15.80,3.26,62.37,44.56,
+"2025-02-06 05:19:42",81.35,15.11,3.29,62.94,45.07,
+"2025-02-05 05:16:31",81.29,15.29,3.28,62.71,44.86,
+"2025-02-04 05:08:40",80.82,15.70,3.23,61.87,44.14,
+"2025-02-03 05:03:58",81.25,15.34,3.27,62.63,44.79,
+"2025-02-02 09:28:36",81.35,14.15,3.35,63.84,45.97,
+"2025-02-01 08:16:04",81.96,13.92,3.40,64.62,46.72,
+"2025-01-31 05:17:32",81.76,14.89,3.32,63.53,45.60,
+"2025-01-30 05:13:51",82.22,15.49,3.31,63.40,45.44,
+"2025-01-29 04:48:21",81.43,14.98,3.30,63.14,45.25,
+"2025-01-28 04:41:32",82.09,14.84,3.34,63.90,45.93,
+"2025-01-27 04:57:02",82.71,14.30,3.41,64.99,46.98,
+"2025-01-26 10:01:19",82.62,15.01,3.36,64.24,46.21,
+"2025-01-25 08:10:36",81.82,15.18,3.31,63.31,45.39,
+"2025-01-24 05:00:07",82.23,15.56,3.31,63.34,45.39,
+"2025-01-23 05:05:37",82.77,15.61,3.34,63.81,45.78,
+"2025-01-22 05:17:09",82.22,15.79,3.30,63.12,45.19,
+"2025-01-21 05:14:28",81.40,15.65,3.26,62.47,44.65,
+"2025-01-20 05:14:28",82.43,16.23,3.28,62.90,44.99,
+"2025-01-19 08:09:51",81.72,15.71,3.28,62.71,44.85,
+"2025-01-18 07:14:56",82.19,15.15,3.33,63.69,45.72,
+"2025-01-17 05:07:47",82.44,15.43,3.33,63.66,45.67,
+"2025-01-16 04:32:43",82.26,15.58,3.31,63.35,45.39,
+"2025-01-15 05:02:35",81.62,15.83,3.26,62.51,44.67,
+"2025-01-14 05:17:02",81.82,15.90,3.27,62.64,44.78,
+"2025-01-13 05:21:45",82.50,15.78,3.31,63.39,45.42,
+"2025-01-12 09:36:31",81.83,15.04,3.32,63.46,45.53,
+"2025-01-11 07:28:54",83.09,15.38,3.37,64.33,46.25,
+"2025-01-10 05:19:01",82.20,15.47,3.31,63.41,45.45,
+"2025-01-09 05:13:40",82.94,15.68,3.34,63.90,45.86,
+"2025-01-08 05:12:07",82.06,16.17,3.27,62.61,44.74,
+"2025-01-07 04:48:25",81.96,16.37,3.25,62.33,44.51,
+"2025-01-06 08:42:18",81.30,15.62,3.26,62.41,44.59,
+"2025-01-05 10:24:57",81.92,15.55,3.29,63.06,45.15,
+"2025-01-04 10:08:22",82.04,15.48,3.30,63.24,45.31,
+"2025-01-03 06:34:52",82.74,15.78,3.32,63.62,45.61,
+"2025-01-02 06:16:25",81.78,14.86,3.33,63.58,45.65,
+"2025-01-01 08:13:55",82.79,15.55,3.34,63.89,45.86,
+"2024-12-31 07:04:46",82.57,15.32,3.34,63.89,45.88,
+"2024-12-30 07:02:21",81.53,15.62,3.27,62.62,44.77,
+"2024-12-29 09:49:10",81.29,15.06,3.29,62.92,45.07,
+"2024-12-28 09:14:18",81.86,15.02,3.32,63.50,45.57,
+"2024-12-27 07:07:58",81.91,15.77,3.28,62.85,44.96,
+"2024-12-26 07:49:39",82.16,15.89,3.29,62.96,45.05,
+"2024-12-25 08:28:12",82.19,14.97,3.34,63.87,45.89,
+"2024-12-24 07:18:35",81.46,14.88,3.31,63.26,45.37,
+"2024-12-23 07:12:31",80.97,15.50,3.25,62.20,44.42,
+"2024-12-21 08:33:21",81.66,15.44,3.29,62.92,45.03,
+"2024-12-20 05:55:40",81.62,15.19,3.30,63.11,45.22,
+"2024-12-19 06:22:00",81.74,15.53,3.29,62.91,45.02,
+"2024-12-18 05:04:15",80.83,15.29,3.25,62.27,44.49,
+"2024-12-17 05:16:28",80.53,15.48,3.23,61.81,44.09,
+"2024-12-16 05:15:46",81.42,15.06,3.30,63.05,45.17,
+"2024-12-15 06:22:22",81.13,14.51,3.31,63.29,45.44,
+"2024-12-14 07:52:23",81.52,15.01,3.30,63.19,45.30,
+"2024-12-13 05:00:45",81.61,14.63,3.33,63.64,45.73,
+"2024-12-12 04:46:08",81.32,14.30,3.34,63.67,45.80,
+"2024-12-11 05:05:40",80.06,14.19,3.27,62.58,44.85,
+"2024-12-10 05:09:36",81.27,14.60,3.31,63.34,45.47,
+"2024-12-09 04:57:00",79.85,14.95,3.22,61.66,43.99,
+"2024-12-08 10:48:12",79.34,14.61,3.21,61.50,43.87,
+"2024-12-07 08:29:44",79.54,14.81,3.21,61.50,43.86,
+"2024-12-06 05:08:04",79.62,14.76,3.22,61.62,43.97,
+"2024-12-04 05:25:00",79.96,14.99,3.23,61.73,44.05,
+"2024-12-03 05:15:21",80.50,14.93,3.26,62.30,44.54,
+"2024-12-02 05:14:20",80.46,15.11,3.24,62.09,44.34,
+"2024-12-01 09:15:25",79.74,14.05,3.27,62.41,44.71,
+"2024-11-30 08:09:08",80.63,14.16,3.31,63.15,45.36,
+"2024-11-29 05:17:34",80.54,14.31,3.29,62.92,45.13,
+"2024-11-28 04:42:57",81.00,15.29,3.26,62.43,44.63,
+"2024-11-27 05:07:07",80.56,14.76,3.27,62.52,44.74,
+"2024-11-25 05:09:48",81.36,14.95,3.30,63.10,45.22,
+"2024-11-24 06:36:02",81.26,15.18,3.28,62.79,44.94,
+"2024-11-23 07:37:10",80.83,15.18,3.26,62.37,44.59,
+"2024-11-21 05:12:33",80.26,15.08,3.24,61.92,44.21,
+"2024-11-20 05:14:48",80.16,14.46,3.26,62.42,44.68,
+"2024-11-19 04:55:58",80.42,14.52,3.27,62.61,44.84,
+"2024-11-18 04:55:31",80.81,14.60,3.29,62.91,45.09,
+"2024-11-17 07:25:38",81.45,15.04,3.30,63.09,45.21,
+"2024-11-16 05:39:55",80.87,14.81,3.28,62.76,44.94,
+"2024-11-15 05:05:43",80.74,15.01,3.26,62.45,44.66,
+"2024-11-14 05:01:05",80.79,14.47,3.30,63.01,45.20,
+"2024-11-13 04:49:24",81.18,14.96,3.29,62.91,45.06,
+"2024-11-12 04:53:35",81.11,14.92,3.29,62.88,45.04,
+"2024-11-11 04:48:50",81.22,15.10,3.28,62.82,44.97,
+"2024-11-10 06:05:33",81.04,14.84,3.29,62.90,45.06,
+"2024-11-09 08:46:27",81.14,15.23,3.27,62.62,44.79,
+"2024-11-08 04:54:37",79.92,14.88,3.23,61.79,44.11,
+"2024-11-07 04:57:00",81.34,15.55,3.26,62.51,44.68,
+"2024-11-06 05:15:57",81.42,14.86,3.31,63.23,45.35,
+"2024-11-05 05:27:54",80.12,14.22,3.28,62.62,44.88,
+"2024-11-04 05:08:17",80.20,15.00,3.24,61.95,44.23,
+"2024-11-03 08:54:52",80.15,14.83,3.24,62.07,44.34,
+"2024-11-02 08:24:25",80.60,15.16,3.25,62.18,44.42,
+"2024-11-01 05:27:34",81.01,14.60,3.30,63.09,45.25,
+"2024-10-31 04:54:39",81.12,14.86,3.29,62.96,45.11,
+"2024-10-30 05:16:52",80.30,14.89,3.25,62.14,44.41,
+"2024-10-29 05:19:16",80.37,14.93,3.25,62.17,44.42,
+"2024-10-28 04:51:27",80.81,15.48,3.24,62.07,44.32,
+"2024-10-27 09:32:36",80.81,14.77,3.28,62.75,44.94,
+"2024-10-26 08:05:18",80.67,14.28,3.30,63.07,45.27,
+"2024-10-25 05:12:29",80.92,15.34,3.25,62.31,44.52,
+"2024-10-24 05:19:25",80.20,14.72,3.25,62.21,44.48,
+"2024-10-22 05:04:37",80.62,14.89,3.26,62.45,44.67,
+"2024-10-21 05:18:28",80.33,15.16,3.23,61.92,44.20,
+"2024-10-20 09:32:21",79.62,14.99,3.21,61.41,43.77,
+"2024-10-19 10:11:59",80.03,14.54,3.25,62.22,44.50,
+"2024-10-18 04:47:31",80.60,14.91,3.26,62.41,44.63,
+"2024-10-17 05:06:02",80.82,14.84,3.28,62.69,44.88,
+"2024-10-16 05:18:54",79.93,14.82,3.23,61.86,44.17,
+"2024-10-15 05:06:23",79.90,14.59,3.24,62.05,44.34,
+"2024-10-14 05:18:57",80.13,14.64,3.25,62.22,44.49,
+"2024-10-13 07:12:58",80.58,14.19,3.30,63.07,45.28,
+"2024-10-12 09:06:12",80.32,14.20,3.29,62.82,45.06,
+"2024-10-11 04:36:22",80.25,14.82,3.25,62.16,44.43,
+"2024-10-10 05:09:10",79.78,13.78,3.28,62.70,45.00,
+"2024-10-09 09:01:56",79.35,13.59,3.27,62.48,44.84,
+"2024-09-30 07:02:16",79.92,14.18,3.27,62.45,44.74,
+"2024-09-29 06:19:35",80.79,13.38,3.36,64.03,46.29,
+"2024-09-28 09:33:38",80.20,14.19,3.28,62.72,44.97,
+"2024-09-27 04:50:25",79.42,13.73,3.27,62.41,44.75,
+"2024-09-26 04:38:58",79.71,13.47,3.30,62.93,45.26,
+"2024-09-25 04:59:20",80.16,14.12,3.28,62.73,44.99,
+"2024-09-24 05:18:56",79.96,13.59,3.31,63.06,45.36,
+"2024-09-23 04:48:44",79.87,14.32,3.26,62.27,44.56,
+"2024-09-22 09:21:31",79.15,13.80,3.25,62.09,44.46,
+"2024-09-21 09:09:15",79.25,14.20,3.23,61.81,44.17,
+"2024-09-20 04:54:35",79.51,13.89,3.26,62.34,44.67,
+"2024-09-19 04:59:56",80.10,13.78,3.30,63.01,45.29,
+"2024-09-18 04:36:47",80.55,13.98,3.31,63.24,45.46,
+"2024-09-17 05:10:39",79.86,14.66,3.24,61.95,44.25,
+"2024-09-16 05:04:36",80.26,14.23,3.28,62.74,44.98,
+"2024-09-15 08:34:20",80.73,14.24,3.31,63.17,45.37,
+"2024-09-14 03:56:28",80.33,13.99,3.30,63.03,45.27,
+"2024-09-13 05:13:17",80.38,14.47,3.27,62.61,44.85,
+"2024-09-12 04:32:14",79.89,13.71,3.29,62.87,45.17,
+"2024-09-11 04:34:15",79.90,13.69,3.30,62.90,45.20,
+"2024-09-10 05:00:44",79.70,14.01,3.27,62.41,44.72,
+"2024-09-09 05:05:46",80.36,14.54,3.27,62.54,44.78,
+"2024-09-08 05:13:56",80.94,14.55,3.30,63.08,45.25,
+"2024-09-07 05:22:34",81.01,14.34,3.32,63.34,45.50,
+"2024-09-06 04:28:10",80.55,14.20,3.30,63.04,45.25,
+"2024-09-05 05:07:53",80.58,14.04,3.31,63.22,45.43,
+"2024-09-04 05:10:30",80.13,14.28,3.27,62.56,44.82,
+"2024-09-03 04:29:13",79.32,14.11,3.24,61.96,44.31,
+"2024-09-02 05:01:13",79.92,14.17,3.27,62.47,44.75,
+"2024-09-01 08:18:45",79.83,14.56,3.24,62.01,44.32,
+"2024-08-31 04:53:41",81.09,13.94,3.34,63.79,45.96,
+"2024-08-30 04:52:52",80.31,14.21,3.29,62.80,45.04,
+"2024-08-28 04:58:19",80.23,14.83,3.25,62.14,44.41,
+"2024-08-27 04:59:20",80.12,14.75,3.25,62.11,44.39,
+"2024-08-26 04:53:30",80.12,14.26,3.27,62.57,44.83,
+"2024-08-25 08:36:56",79.06,13.82,3.24,61.97,44.35,
+"2024-08-24 05:32:22",80.34,13.74,3.32,63.27,45.53,
+"2024-08-23 04:46:51",80.31,13.89,3.30,63.09,45.34,
+"2024-08-22 04:58:35",80.71,14.32,3.30,63.07,45.27,
+"2024-08-21 05:06:36",80.38,14.78,3.26,62.32,44.57,
+"2024-08-20 05:03:25",79.92,14.69,3.24,61.98,44.28,
+"2024-08-19 05:07:41",79.52,14.39,3.23,61.88,44.21,
+"2024-08-18 08:25:29",79.81,14.45,3.25,62.10,44.41,
+"2024-08-17 07:52:43",79.81,14.58,3.24,61.97,44.28,
+"2024-08-16 05:03:05",79.53,14.23,3.24,62.04,44.37,
+"2024-08-15 05:04:03",79.72,14.39,3.25,62.07,44.38,
+"2024-08-14 04:56:34",79.31,13.88,3.25,62.16,44.51,
+"2024-08-13 04:57:50",78.69,13.88,3.22,61.57,43.98,
+"2024-08-12 05:01:35",79.19,13.88,3.25,62.05,44.42,
+"2024-08-11 07:49:18",79.33,13.70,3.26,62.35,44.71,
+"2024-08-10 08:10:44",79.40,14.49,3.22,61.68,44.03,
+"2024-08-09 05:06:12",78.41,13.67,3.22,61.50,43.95,
+"2024-08-08 04:54:00",78.92,13.44,3.26,62.21,44.61,
+"2024-08-07 05:06:55",78.97,14.23,3.22,61.50,43.90,
+"2024-08-06 05:32:51",79.04,13.55,3.26,62.22,44.61,
+"2024-08-05 04:57:05",78.66,14.45,3.19,61.00,43.45,
+"2024-08-04 08:28:44",78.23,14.13,3.18,60.90,43.37,
+"2024-08-03 08:59:35",79.16,14.42,3.21,61.50,43.89,
+"2024-08-02 05:04:57",80.13,14.34,3.27,62.50,44.77,
+"2024-07-31 05:16:56",79.83,14.39,3.25,62.17,44.47,
+"2024-07-30 05:02:46",79.53,14.67,3.22,61.62,43.97,
+"2024-07-29 05:05:42",80.45,15.01,3.25,62.18,44.43,
+"2024-07-28 08:33:30",80.29,14.58,3.26,62.44,44.69,
+"2024-07-20 05:04:28",79.80,13.26,3.32,63.21,45.55,
+"2024-07-19 04:42:02",80.39,13.79,3.32,63.26,45.51,
+"2024-07-18 04:51:30",80.09,13.71,3.30,63.05,45.34,
+"2024-07-17 05:06:11",79.09,13.64,3.26,62.18,44.56,
+"2024-07-16 05:07:55",78.44,14.52,3.17,60.73,43.21,
+"2024-07-15 05:09:47",78.79,14.37,3.20,61.21,43.63,
+"2024-07-14 08:22:10",79.29,13.39,3.28,62.60,44.97,
+"2024-07-13 07:26:01",79.00,12.95,3.29,62.74,45.18,
+"2024-07-12 04:33:10",79.51,13.46,3.29,62.75,45.10,
+"2024-07-11 05:07:54",79.52,13.64,3.28,62.59,44.93,
+"2024-07-10 04:42:03",79.53,13.71,3.27,62.53,44.86,
+"2024-07-09 04:52:10",78.52,13.41,3.24,61.86,44.30,
+"2024-07-08 04:43:18",78.71,14.02,3.21,61.46,43.88,
+"2024-07-07 08:22:25",78.53,14.33,3.19,61.00,43.46,
+"2024-07-06 07:33:39",78.73,13.48,3.25,61.99,44.41,
+"2024-07-05 05:11:18",77.99,13.08,3.23,61.66,44.17,
+"2024-07-04 04:47:21",79.11,13.35,3.27,62.47,44.86,
+"2024-07-03 05:08:08",77.97,12.94,3.24,61.78,44.30,
+"2024-07-02 05:01:17",78.02,13.60,3.20,61.20,43.68,
+"2024-07-01 04:54:37",77.78,13.64,3.19,60.94,43.45,
+"2024-06-30 06:58:12",77.68,13.76,3.18,60.73,43.25,
+"2024-06-29 08:57:49",77.52,13.01,3.21,61.29,43.84,
+"2024-06-28 04:47:12",78.59,12.74,3.28,62.55,45.05,
+"2024-06-27 05:07:20",78.95,13.22,3.27,62.44,44.86,
+"2024-06-26 04:39:18",78.97,13.59,3.25,62.11,44.50,
+"2024-06-24 05:02:16",78.70,14.08,3.21,61.40,43.82,
+"2024-06-23 07:13:42",78.85,13.65,3.24,61.94,44.34,
+"2024-06-22 09:32:11",79.15,14.31,3.22,61.60,43.98,
+"2024-06-21 04:54:02",79.20,13.73,3.26,62.20,44.56,
+"2024-06-20 04:51:50",80.26,13.01,3.36,63.88,46.23,
+"2024-06-19 05:05:14",81.23,13.68,3.37,64.16,46.35,
+"2024-06-18 08:08:38",79.36,13.43,3.28,62.64,45.00,
+"2024-06-10 04:52:36",78.88,12.84,3.29,62.74,45.20,
+"2024-06-09 05:41:00",78.66,12.93,3.27,62.43,44.90,
+"2024-06-08 08:02:40",79.12,12.81,3.31,62.98,45.44,
+"2024-06-07 03:55:31",79.47,12.58,3.34,63.53,46.00,
+"2024-06-06 04:44:00",78.91,12.96,3.29,62.66,45.10,
+"2024-06-05 04:57:47",78.27,12.96,3.25,62.05,44.54,
+"2024-06-04 04:49:36",78.17,13.15,3.24,61.77,44.26,
+"2024-06-03 05:00:04",78.37,13.72,3.21,61.41,43.87,
+"2024-06-02 09:01:18",78.12,13.37,3.22,61.51,43.99,
+"2024-06-01 06:50:43",78.88,11.98,3.35,63.53,46.18,
+"2024-05-31 04:59:05",78.70,13.06,3.27,62.36,44.81,
+"2024-05-30 06:58:37",77.91,12.55,3.26,62.09,44.66,
+"2024-05-29 04:55:01",78.93,13.73,3.24,61.95,44.34,
+"2024-05-28 04:53:18",78.01,13.50,3.21,61.29,43.78,
+"2024-05-27 04:58:45",78.36,12.95,3.26,62.14,44.63,
+"2024-05-26 06:58:14",79.01,13.15,3.28,62.57,44.99,
+"2024-05-25 06:41:05",78.87,12.60,3.31,62.95,45.45,
+"2024-05-24 04:48:31",79.15,12.96,3.30,62.87,45.30,
+"2024-05-23 04:52:30",79.24,12.88,3.31,63.03,45.46,
+"2024-05-22 05:02:41",78.42,13.21,3.24,61.95,44.41,
+"2024-05-21 05:00:52",79.07,12.78,3.31,62.96,45.42,
+"2024-05-20 06:25:46",79.04,12.70,3.31,63.01,45.49,
+"2024-05-19 07:20:53",78.02,12.62,3.26,62.13,44.68,
+"2024-05-18 08:52:23",77.69,12.54,3.25,61.89,44.47,
+"2024-05-17 04:56:29",77.95,12.45,3.27,62.22,44.80,
+"2024-05-16 05:00:53",78.47,12.91,3.27,62.28,44.77,
+"2024-05-15 04:56:34",78.38,12.63,3.28,62.46,44.99,
+"2024-05-14 05:07:25",78.08,12.32,3.28,62.46,45.06,
+"2024-05-13 04:48:48",78.66,12.92,3.27,62.44,44.91,
+"2024-05-12 06:55:13",79.28,13.10,3.30,62.87,45.27,
+"2024-05-11 07:59:43",78.63,12.09,3.33,63.19,45.82,
+"2024-05-10 05:09:15",79.01,12.87,3.30,62.83,45.28,
+"2024-05-09 07:25:40",77.85,12.57,3.25,62.02,44.59,
+"2024-05-08 05:09:35",79.53,13.22,3.30,62.99,45.37,
+"2024-05-07 04:48:24",78.21,12.82,3.26,62.12,44.64,
+"2024-05-06 04:55:20",78.43,13.37,3.24,61.81,44.26,
+"2024-05-05 07:42:19",78.41,13.13,3.25,62.02,44.48,
+"2024-05-04 08:14:33",78.51,12.61,3.29,62.60,45.12,
+"2024-05-03 04:53:26",78.95,12.44,3.32,63.17,45.70,
+"2024-05-02 04:56:07",78.63,12.45,3.30,62.86,45.40,
+"2024-05-01 07:49:46",78.17,12.95,3.25,61.96,44.46,
+"2024-04-30 04:55:48",78.07,12.51,3.27,62.28,44.84,
+"2024-04-29 05:05:56",77.73,12.81,3.23,61.68,44.23,
+"2024-04-28 06:52:30",78.60,12.79,3.28,62.51,45.00,
+"2024-04-27 06:58:01",78.03,13.18,3.23,61.61,44.11,
+"2024-04-26 04:52:42",77.98,12.58,3.26,62.12,44.68,
+"2024-04-25 05:13:06",78.37,13.07,3.25,62.03,44.51,
+"2024-04-24 04:32:12",78.72,12.90,3.28,62.53,45.00,
+"2024-04-23 05:10:49",78.15,12.97,3.24,61.92,44.42,
+"2024-04-22 04:52:06",78.40,12.80,3.27,62.31,44.82,
+"2024-04-21 08:58:47",77.59,12.69,3.23,61.65,44.23,
+"2024-04-20 09:02:15",77.44,12.63,3.23,61.57,44.16,
+"2024-04-19 04:56:03",77.98,12.86,3.24,61.86,44.38,
+"2024-04-18 04:32:48",78.33,13.15,3.24,61.93,44.40,
+"2024-04-17 04:39:22",77.94,12.71,3.25,61.96,44.51,
+"2024-04-16 04:34:26",78.23,12.76,3.26,62.19,44.71,
+"2024-04-15 04:51:40",78.69,12.49,3.30,62.89,45.42,
+"2024-04-14 07:11:09",79.61,12.65,3.35,63.60,46.05,
+"2024-04-13 08:28:34",78.62,12.41,3.31,62.89,45.44,
+"2024-04-12 07:36:26",77.11,12.79,3.20,61.10,43.70,
+"2024-04-11 04:57:31",77.31,12.61,3.22,61.46,44.06,
+"2024-04-10 04:54:14",78.66,12.40,3.31,62.94,45.49,
+"2024-04-09 04:43:10",78.28,12.08,3.31,62.88,45.52,
+"2024-04-04 04:44:47",79.09,11.78,3.38,63.92,46.62,
+"2024-04-03 04:42:44",78.66,12.13,3.33,63.18,45.79,
+"2024-04-02 04:49:28",79.73,12.09,3.39,64.23,46.81,
+"2024-04-01 06:32:41",79.57,12.35,3.36,63.84,46.36,
+"2024-03-31 06:35:41",78.56,12.60,3.29,62.66,45.18,
+"2024-03-30 07:17:35",77.73,12.70,3.24,61.77,44.33,
+"2024-03-29 04:53:35",77.72,12.26,3.26,62.18,44.80,
+"2024-03-28 04:43:54",79.26,12.67,3.32,63.24,45.71,
+"2024-03-27 05:04:06",78.67,12.46,3.30,62.88,45.42,
+"2024-03-26 04:56:42",79.08,12.84,3.30,62.92,45.37,
+"2024-03-25 05:05:00",79.04,12.68,3.31,63.03,45.51,
+"2024-03-24 08:51:15",78.08,12.03,3.30,62.73,45.39,
+"2024-03-23 07:52:36",78.68,12.54,3.30,62.83,45.35,
+"2024-03-22 04:55:44",78.73,12.53,3.30,62.88,45.40,
+"2024-03-21 05:04:10",78.71,12.39,3.31,62.99,45.54,
+"2024-03-20 04:47:15",78.76,13.04,3.27,62.43,44.88,
+"2024-03-19 04:41:15",78.49,12.58,3.29,62.60,45.13,
+"2024-03-18 05:01:08",79.97,13.51,3.31,63.14,45.44,
+"2024-03-17 10:49:05",77.82,12.92,3.23,61.66,44.19,
+"2024-03-16 08:18:49",78.02,12.06,3.30,62.65,45.31,
+"2024-03-15 04:44:21",78.75,12.84,3.28,62.61,45.08,
+"2024-03-14 04:53:20",79.34,12.69,3.33,63.31,45.77,
+"2024-03-13 04:55:56",78.76,12.68,3.30,62.77,45.26,
+"2024-03-12 04:44:46",78.55,12.72,3.28,62.53,45.04,
+"2024-03-11 04:58:01",79.10,12.85,3.30,62.93,45.38,
+"2024-03-10 09:10:15",78.51,12.18,3.31,63.00,45.61,
+"2024-03-09 09:13:39",77.81,11.97,3.29,62.54,45.22,
+"2024-03-08 04:34:39",77.81,12.44,3.26,62.10,44.69,
+"2024-03-07 04:55:44",77.57,12.14,3.26,62.15,44.81,
+"2024-03-06 04:47:02",77.32,12.12,3.25,61.94,44.61,
+"2024-03-05 04:52:28",77.25,12.47,3.23,61.53,44.15,
+"2024-03-04 05:04:07",77.78,12.54,3.25,61.98,44.56,
+"2024-03-03 07:29:33",78.00,12.32,3.28,62.39,44.99,
+"2024-03-02 06:43:13",77.69,12.42,3.25,62.00,44.60,
+"2024-03-01 05:05:55",77.60,12.12,3.27,62.20,44.86,
+"2024-02-29 05:19:58",77.37,12.23,3.25,61.88,44.53,
+"2024-02-28 05:19:09",77.01,12.17,3.23,61.59,44.27,
+"2024-02-27 05:07:54",76.94,12.07,3.23,61.63,44.32,
+"2024-02-26 05:10:01",77.92,12.87,3.24,61.79,44.32,
+"2024-02-25 09:10:06",76.42,12.29,3.19,60.92,43.62,
+"2024-02-24 08:21:06",76.90,11.98,3.24,61.66,44.38,
+"2024-02-23 04:34:01",78.18,12.42,3.28,62.46,45.03,
+"2024-02-22 04:42:20",78.07,12.55,3.27,62.24,44.79,
+"2024-02-21 04:55:58",77.82,12.53,3.25,62.02,44.60,
+"2024-02-20 04:59:20",77.18,12.48,3.22,61.46,44.08,
+"2024-02-19 04:42:37",77.38,12.30,3.24,61.83,44.46,
+"2024-02-18 06:50:34",77.65,12.52,3.24,61.87,44.46,
+"2024-02-17 08:13:49",77.61,13.05,3.21,61.33,43.87,
+"2024-02-16 05:07:43",77.51,12.12,3.26,62.10,44.76,
+"2024-02-15 05:28:14",79.09,12.60,3.32,63.16,45.64,
+"2024-02-14 04:59:11",77.97,12.43,3.27,62.26,44.84,
+"2024-02-13 05:01:55",77.59,12.42,3.25,61.91,44.51,
+"2024-02-12 05:16:41",77.53,12.88,3.22,61.42,43.98,
+"2024-02-11 08:53:25",76.31,12.66,3.17,60.47,43.14,
+"2024-02-10 08:42:08",76.73,12.24,3.21,61.26,43.94,
+"2024-02-09 04:53:14",78.21,12.76,3.26,62.17,44.69,
+"2024-02-08 04:55:04",78.79,12.56,3.30,62.91,45.42,
+"2024-02-07 05:20:08",78.15,12.06,3.30,62.77,45.42,
+"2024-02-06 05:17:43",77.68,12.32,3.26,62.08,44.70,
+"2024-02-05 05:07:25",77.83,12.76,3.24,61.82,44.37,
+"2024-02-04 08:26:01",77.31,12.62,3.22,61.45,44.05,
+"2024-02-03 08:59:26",77.02,12.35,3.22,61.43,44.08,
+"2024-02-02 05:06:45",77.80,12.61,3.25,61.93,44.49,
+"2024-02-01 05:09:19",78.02,12.30,3.28,62.43,45.03,
+"2024-01-31 05:14:02",78.09,12.31,3.28,62.48,45.08,
+"2024-01-30 05:18:32",77.57,12.53,3.24,61.78,44.37,
+"2024-01-29 05:01:28",77.14,12.64,3.21,61.27,43.88,
+"2024-01-28 07:28:47",76.22,11.76,3.21,61.23,44.02,
+"2024-01-27 06:09:26",78.27,12.44,3.28,62.53,45.10,
+"2024-01-26 05:21:16",77.47,12.59,3.23,61.64,44.23,
+"2024-01-25 05:05:49",77.41,12.06,3.26,62.08,44.75,
+"2024-01-24 05:07:51",77.47,12.22,3.25,61.98,44.63,
+"2024-01-23 05:19:53",77.73,12.37,3.26,62.08,44.69,
+"2024-01-22 05:13:28",76.98,12.11,3.23,61.62,44.31,
+"2024-01-21 08:55:21",76.63,11.82,3.23,61.57,44.33,
+"2024-01-20 06:28:59",76.96,12.52,3.21,61.22,43.85,
+"2024-01-19 05:02:23",77.44,12.08,3.26,62.09,44.76,
+"2024-01-18 05:11:23",77.89,12.25,3.27,62.35,44.97,
+"2024-01-17 05:14:09",78.04,12.91,3.24,61.88,44.39,
+"2024-01-16 05:29:19",77.04,12.60,3.21,61.22,43.84,
+"2024-01-15 05:03:37",77.10,12.64,3.21,61.24,43.85,
+"2024-01-14 09:25:16",76.81,12.22,3.22,61.36,44.04,
+"2024-01-13 08:36:50",76.75,12.84,3.18,60.72,43.35,
+"2024-01-12 05:08:17",77.18,12.96,3.19,61.01,43.60,
+"2024-01-11 05:08:40",77.39,13.00,3.20,61.17,43.74,
+"2024-01-10 05:18:26",77.56,13.26,3.20,61.09,43.63,
+"2024-01-09 05:07:17",77.61,12.70,3.23,61.66,44.23,
+"2024-01-08 04:39:18",77.46,12.55,3.23,61.66,44.26,
+"2024-01-07 09:15:30",77.02,12.47,3.21,61.32,43.96,
+"2024-01-06 05:55:17",78.29,13.25,3.23,61.79,44.26,
+"2024-01-05 05:24:57",77.77,12.83,3.23,61.69,44.23,
+"2024-01-04 05:25:48",77.67,12.52,3.25,61.89,44.47,
+"2024-01-03 05:24:01",77.81,13.20,3.21,61.38,43.90,
+"2023-12-28 05:04:58",78.45,12.67,3.28,62.48,45.00,
+"2023-12-27 05:13:04",77.88,12.27,3.27,62.32,44.93,
+"2023-12-26 06:44:25",77.24,12.60,3.22,61.41,44.01,
+"2023-12-25 07:10:09",78.44,13.06,3.25,62.12,44.59,
+"2023-12-24 06:06:21",76.89,12.60,3.20,61.08,43.71,
+"2023-12-23 08:14:49",76.59,12.44,3.19,60.94,43.61,
+"2023-12-22 05:31:11",77.40,12.32,3.24,61.82,44.45,
+"2023-12-21 05:21:54",77.41,12.20,3.25,61.94,44.59,
+"2023-12-20 05:09:54",77.61,12.51,3.24,61.84,44.43,
+"2023-12-19 05:41:09",77.36,12.39,3.24,61.72,44.34,
+"2023-12-18 05:18:25",77.37,12.64,3.22,61.49,44.08,
+"2023-12-17 08:50:56",77.29,12.72,3.21,61.35,43.94,
+"2023-12-16 10:14:42",76.30,12.37,3.18,60.73,43.43,
+"2023-12-15 05:09:42",78.07,12.66,3.26,62.14,44.68,
+"2023-12-14 05:23:59",78.45,12.92,3.26,62.25,44.73,
+"2023-12-13 05:12:37",77.98,12.96,3.24,61.78,44.29,
+"2023-12-12 05:34:08",78.05,12.80,3.25,61.98,44.50,
+"2023-12-11 05:29:47",77.88,13.21,3.22,61.44,43.96,
+"2023-12-10 09:07:28",76.71,12.60,3.19,60.91,43.56,
+"2023-12-09 09:48:42",77.43,12.46,3.24,61.72,44.33,
+"2023-12-08 05:04:49",77.99,12.14,3.29,62.55,45.18,
+"2023-12-07 05:35:48",78.27,12.88,3.26,62.12,44.62,
+"2023-12-06 05:10:16",78.36,12.96,3.26,62.13,44.61,
+"2023-12-05 05:35:25",77.80,13.28,3.21,61.29,43.81,
+"2023-12-04 05:06:56",78.14,13.66,3.20,61.26,43.74,
+"2023-12-03 09:16:29",77.82,13.48,3.20,61.12,43.64,
+"2023-12-02 09:00:56",77.90,12.78,3.24,61.86,44.40,
+"2023-12-01 05:09:49",77.63,13.05,3.21,61.35,43.89,
+"2023-11-30 05:31:33",77.32,13.07,3.19,61.04,43.61,
+"2023-11-29 05:34:21",78.95,13.00,3.29,62.65,45.09,
+"2023-11-28 05:19:36",79.19,13.44,3.27,62.46,44.84,
+"2023-11-27 04:58:09",78.53,13.52,3.23,61.76,44.20,
+"2023-11-26 09:23:09",77.82,13.23,3.21,61.36,43.88,
+"2023-11-25 08:56:38",78.43,13.17,3.25,62.00,44.46,
+"2023-11-24 05:34:00",78.45,13.12,3.25,62.07,44.53,
+"2023-11-23 05:10:15",78.67,13.45,3.24,61.96,44.39,
+"2023-11-22 05:23:40",78.01,13.57,3.20,61.22,43.71,
+"2023-11-21 05:08:12",78.70,13.30,3.25,62.13,44.56,
+"2023-11-20 05:11:23",78.57,13.67,3.23,61.65,44.09,
+"2023-11-19 09:15:10",77.97,12.92,3.24,61.80,44.32,
+"2023-11-18 08:37:31",78.31,13.12,3.24,61.92,44.40,
+"2023-11-17 04:58:34",78.62,13.35,3.25,62.01,44.44,
+"2023-11-16 05:29:45",79.04,13.15,3.28,62.59,45.01,
+"2023-11-15 05:18:12",78.96,13.72,3.24,61.98,44.38,
+"2023-11-14 05:19:12",79.20,13.51,3.27,62.41,44.79,
+"2023-11-13 04:37:40",79.51,14.28,3.24,61.98,44.32,
+"2023-11-12 09:30:23",78.76,13.95,3.22,61.57,43.99,
+"2023-11-11 09:16:32",78.34,13.52,3.22,61.58,44.04,
+"2023-11-10 05:26:21",78.90,14.11,3.22,61.56,43.96,
+"2023-11-09 05:28:51",79.16,13.72,3.25,62.18,44.55,
+"2023-11-08 05:23:40",79.19,13.70,3.26,62.22,44.59,
+"2023-11-07 05:24:58",79.76,13.75,3.28,62.71,45.02,
+"2023-11-06 05:19:08",79.19,13.60,3.26,62.31,44.69,
+"2023-11-05 09:55:31",78.54,13.94,3.21,61.37,43.82,
+"2023-11-04 05:40:32",79.59,14.67,3.22,61.68,44.04,
+"2023-11-03 05:08:14",78.86,13.82,3.23,61.79,44.20,
+"2023-11-02 05:20:19",79.90,13.70,3.29,62.89,45.19,
+"2023-10-31 05:21:28",79.84,13.94,3.28,62.61,44.91,
+"2023-10-30 05:18:44",79.35,14.24,3.23,61.86,44.22,
+"2023-10-29 06:30:25",79.43,14.02,3.25,62.15,44.49,
+"2023-10-28 05:42:07",79.91,13.98,3.28,62.63,44.92,
+"2023-10-27 05:23:38",79.17,14.19,3.23,61.74,44.12,
+"2023-10-26 05:03:53",79.33,13.45,3.28,62.59,44.95,
+"2023-10-25 05:33:42",80.63,13.41,3.35,63.85,46.11,
+"2023-10-08 05:34:06",79.59,13.47,3.29,62.82,45.16,
+"2023-10-07 08:18:21",79.31,13.63,3.27,62.40,44.76,
+"2023-10-06 05:28:01",80.22,13.82,3.30,63.08,45.34,
+"2023-10-05 05:29:10",79.07,13.75,3.25,62.06,44.44,
+"2023-10-04 05:26:03",79.03,13.82,3.24,61.95,44.34,
+"2023-10-03 05:28:38",79.95,13.51,3.31,63.11,45.42,
+"2023-10-02 05:14:00",79.56,13.52,3.29,62.74,45.08,
+"2023-10-01 06:04:50",79.74,14.24,3.25,62.23,44.54,
+"2023-09-30 06:11:38",79.50,13.51,3.28,62.69,45.04,
+"2023-09-29 05:34:09",79.15,13.40,3.27,62.47,44.85,
+"2023-09-28 05:11:59",79.40,13.79,3.26,62.34,44.68,
+"2023-09-27 05:14:58",79.43,13.37,3.29,62.76,45.12,
+"2023-09-26 05:17:27",79.50,14.46,3.23,61.79,44.14,
+"2023-09-25 04:57:10",79.39,14.25,3.23,61.88,44.24,
+"2023-09-24 09:39:49",79.42,13.47,3.28,62.66,45.02,
+"2023-09-23 07:44:38",79.13,13.58,3.26,62.27,44.65,
+"2023-09-22 05:33:25",79.69,14.04,3.26,62.37,44.69,
+"2023-09-21 05:30:08",79.71,13.44,3.30,62.96,45.29,
+"2023-09-20 05:33:09",80.20,13.57,3.32,63.30,45.58,
+"2023-09-19 05:33:52",79.20,13.53,3.27,62.39,44.77,
+"2023-09-18 05:34:03",78.45,13.42,3.23,61.78,44.23,
+"2023-09-17 07:58:10",78.61,13.45,3.24,61.90,44.33,
+"2023-09-16 08:59:23",79.55,13.03,3.32,63.18,45.57,
+"2023-09-15 05:39:20",79.51,13.21,3.30,62.98,45.35,
+"2023-09-14 05:19:58",79.98,13.19,3.33,63.45,45.78,
+"2023-09-13 05:15:27",78.97,13.45,3.26,62.24,44.64,
+"2023-09-12 05:33:20",79.06,13.71,3.25,62.09,44.47,
+"2023-09-11 05:32:18",78.64,13.38,3.25,62.00,44.44,
+"2023-09-10 09:26:43",78.98,13.76,3.24,61.97,44.36,
+"2023-09-09 05:18:00",78.33,12.70,3.27,62.34,44.86,
+"2023-09-08 05:34:32",78.84,13.17,3.27,62.38,44.81,
+"2023-09-07 05:06:50",79.86,12.84,3.35,63.66,46.05,
+"2023-09-06 05:06:03",79.39,13.27,3.29,62.80,45.18,
+"2023-09-05 05:01:04",79.37,13.53,3.27,62.54,44.90,
+"2023-09-04 05:33:31",79.18,13.65,3.26,62.26,44.63,
+"2023-09-03 08:31:47",79.18,13.61,3.26,62.30,44.67,
+"2023-09-02 06:44:50",79.12,13.20,3.28,62.62,45.02,
+"2023-09-01 05:19:01",78.50,13.31,3.24,61.93,44.38,
+"2023-08-31 05:17:54",78.54,12.95,3.27,62.31,44.78,
+"2023-08-30 05:33:13",78.68,12.93,3.27,62.45,44.92,
+"2023-08-29 05:13:38",78.76,13.54,3.24,61.96,44.38,
+"2023-08-28 05:32:11",78.39,13.66,3.22,61.50,43.95,
+"2023-08-27 06:36:09",78.81,13.87,3.23,61.70,44.11,
+"2023-08-26 08:08:41",78.01,13.04,3.23,61.72,44.23,
+"2023-08-24 05:01:27",78.87,13.51,3.25,62.09,44.50,
+"2023-08-23 05:07:57",78.45,13.57,3.22,61.64,44.09,
+"2023-08-21 05:05:15",79.51,13.38,3.29,62.83,45.19,
+"2023-08-20 08:09:23",78.72,13.68,3.23,61.79,44.21,
+"2023-08-19 10:12:37",78.44,13.53,3.23,61.66,44.12,
+"2023-08-18 04:58:04",78.65,12.92,3.27,62.45,44.91,
+"2023-08-17 04:57:15",79.39,13.07,3.30,63.00,45.40,
+"2023-08-16 05:13:18",79.34,13.40,3.28,62.64,45.01,
+"2023-08-15 05:12:22",78.68,13.36,3.25,62.05,44.49,
+"2023-08-14 05:00:56",77.95,13.03,3.23,61.67,44.19,
+"2023-08-13 09:12:53",77.79,12.97,3.22,61.59,44.12,
+"2023-08-12 05:12:19",78.93,12.56,3.31,63.04,45.54,
+"2023-08-11 05:07:06",78.72,12.21,3.32,63.17,45.75,
+"2023-08-10 05:18:42",78.70,12.85,3.28,62.55,45.03,
+"2023-08-09 05:33:59",78.70,13.14,3.26,62.28,44.72,
+"2023-08-08 05:27:00",79.18,12.98,3.30,62.89,45.32,
+"2023-08-07 05:18:48",78.33,13.21,3.24,61.87,44.34,
+"2023-08-06 09:48:34",77.36,12.58,3.23,61.54,44.14,
+"2023-08-05 06:25:35",78.71,13.05,3.27,62.38,44.83,
+"2023-08-04 05:21:38",78.90,13.30,3.26,62.32,44.74,
+"2023-08-03 05:15:39",78.57,12.67,3.28,62.60,45.10,
+"2023-08-02 04:53:30",78.29,13.02,3.25,62.01,44.49,
+"2023-08-01 05:03:40",78.00,12.78,3.25,61.96,44.49,
+"2023-07-31 05:22:37",77.72,12.67,3.24,61.79,44.36,
+"2023-07-30 10:48:58",77.26,12.70,3.21,61.33,43.93,
+"2023-07-29 08:22:44",78.32,12.23,3.30,62.78,45.37,
+"2023-07-28 05:00:13",77.62,12.45,3.25,61.91,44.51,
+"2023-07-27 04:59:09",78.20,12.38,3.28,62.52,45.09,
+"2023-07-26 05:03:48",79.28,13.39,3.28,62.59,44.97,
+"2023-07-25 04:47:20",78.04,13.08,3.23,61.71,44.22,
+"2023-07-24 04:45:53",77.90,12.74,3.24,61.90,44.44,
+"2023-07-23 09:01:54",76.90,12.38,3.21,61.30,43.95,
+"2023-07-22 08:09:43",76.94,12.43,3.21,61.28,43.93,
+"2023-07-21 05:00:09",77.41,12.35,3.24,61.80,44.43,
+"2023-07-20 05:05:45",78.34,12.98,3.25,62.09,44.58,
+"2023-07-19 05:00:33",78.29,12.63,3.27,62.38,44.91,
+"2023-07-18 04:41:44",77.77,12.91,3.23,61.61,44.15,
+"2023-07-17 05:08:18",77.77,13.85,3.18,60.73,43.26,
+"2023-07-16 10:39:15",76.62,12.77,3.18,60.66,43.30,
+"2023-07-15 05:44:54",78.03,13.11,3.23,61.68,44.19,
+"2023-07-14 04:34:05",77.09,12.13,3.24,61.71,44.38,
+"2023-07-13 04:30:07",78.03,12.22,3.28,62.51,45.12,
+"2023-07-12 04:38:27",77.23,12.46,3.23,61.53,44.16,
+"2023-07-11 04:33:01",77.47,12.51,3.23,61.71,44.31,
+"2023-07-10 04:58:45",76.46,12.61,3.18,60.66,43.33,
+"2023-07-09 05:48:59",76.18,12.17,3.19,60.81,43.53,
+"2023-07-08 06:59:02",76.34,12.21,3.19,60.92,43.63,
+"2023-07-07 05:25:10",76.76,12.32,3.21,61.21,43.88,
+"2023-07-06 05:02:46",77.44,12.77,3.22,61.44,44.01,
+"2023-07-05 04:51:43",78.63,12.90,3.27,62.45,44.92,
+"2023-07-04 05:04:37",79.23,12.66,3.32,63.24,45.70,
+"2023-06-30 03:19:56",77.98,12.38,3.27,62.32,44.90,
+"2023-06-29 04:38:45",77.63,13.32,3.20,61.10,43.63,
+"2023-06-28 05:13:50",76.63,12.18,3.21,61.22,43.92,
+"2023-06-27 04:47:44",77.67,12.60,3.24,61.81,44.39,
+"2023-06-26 05:09:16",77.55,13.02,3.21,61.30,43.85,
+"2023-06-25 07:23:02",77.32,12.17,3.25,61.88,44.54,
+"2023-06-24 07:11:05",76.90,12.05,3.23,61.61,44.31,
+"2023-06-23 05:12:30",77.49,13.11,3.20,61.16,43.72,
+"2023-06-22 05:20:51",77.30,12.86,3.21,61.22,43.80,
+"2023-06-21 04:51:44",77.03,12.75,3.20,61.07,43.68,
+"2023-06-20 04:51:06",77.69,13.48,3.19,61.01,43.54,
+"2023-06-19 04:50:33",78.01,13.11,3.23,61.65,44.16,
+"2023-06-18 09:01:57",77.67,12.56,3.24,61.85,44.43,
+"2023-06-17 08:18:36",77.83,12.81,3.24,61.76,44.31,
+"2023-06-16 05:01:51",77.94,13.07,3.23,61.63,44.14,
+"2023-06-15 05:03:43",79.04,13.86,3.24,61.92,44.31,
+"2023-06-14 05:34:10",78.26,13.53,3.22,61.50,43.97,
+"2023-06-13 04:04:19",78.96,13.12,3.28,62.55,44.97,
+"2023-06-13 04:03:54",79.70,,,,,
+"2023-06-12 05:34:08",78.51,13.75,3.22,61.52,43.97,
+"2023-06-11 08:38:58",77.72,13.71,3.18,60.81,43.34,
+"2023-06-10 05:12:50",79.06,13.84,3.24,61.96,44.34,
+"2023-06-09 08:01:43",78.39,13.68,3.22,61.48,43.94,
+"2023-06-08 08:32:25",79.07,13.72,3.25,62.09,44.47,
+"2023-06-07 05:34:30",79.01,13.35,3.27,62.38,44.78,
+"2023-06-06 05:18:24",78.63,14.19,3.20,61.23,43.68,
+"2023-06-05 05:33:21",78.10,13.84,3.19,61.05,43.55,
+"2023-06-04 08:30:04",78.21,13.08,3.24,61.87,44.36,
+"2023-06-03 08:48:30",78.58,13.73,3.22,61.61,44.05,
+"2023-06-02 05:33:38",79.15,14.37,3.22,61.55,43.94,
+"2023-06-01 05:33:20",79.25,13.50,3.27,62.46,44.84,
+"2023-05-31 05:34:30",79.14,13.20,3.28,62.65,45.05,
+"2023-05-30 05:13:38",80.01,14.57,3.25,62.18,44.48,
+"2023-05-29 07:59:35",80.07,13.73,3.30,63.02,45.30,
+"2023-05-28 08:59:34",80.13,13.91,3.29,62.91,45.18,
+"2023-05-26 05:33:43",80.21,13.78,3.30,63.10,45.37,
+"2023-05-25 05:33:10",80.76,13.80,3.33,63.60,45.82,
+"2023-05-24 05:17:30",80.54,14.03,3.31,63.19,45.42,
+"2023-05-23 05:10:56",80.45,14.04,3.30,63.09,45.33,
+"2023-05-22 05:39:52",80.34,14.39,3.28,62.65,44.90,
+"2023-05-21 09:47:02",79.61,13.96,3.26,62.37,44.70,
+"2023-05-20 08:03:48",79.60,13.85,3.27,62.46,44.79,
+"2023-05-19 05:11:00",80.26,14.70,3.26,62.30,44.57,
+"2023-05-18 07:07:50",80.15,13.92,3.29,62.92,45.19,
+"2023-05-17 05:16:23",80.53,13.87,3.32,63.33,45.56,
+"2023-05-16 05:32:50",79.91,13.73,3.29,62.87,45.17,
+"2023-05-15 05:28:49",79.07,14.07,3.23,61.75,44.14,
+"2023-05-14 09:17:40",79.06,13.50,3.26,62.28,44.67,
+"2023-05-13 05:35:51",79.57,13.99,3.26,62.30,44.63,
+"2023-05-12 05:33:57",80.38,13.88,3.31,63.18,45.42,
+"2023-05-11 05:36:29",79.07,13.44,3.26,62.35,44.74,
+"2023-05-10 05:34:13",80.38,13.71,3.32,63.34,45.59,
+"2023-05-09 05:35:45",79.82,13.43,3.30,63.07,45.39,
+"2023-05-07 08:15:01",78.81,13.54,3.24,62.00,44.42,
+"2023-05-06 05:27:45",79.21,13.09,3.29,62.80,45.21,
+"2023-05-05 05:13:52",79.21,13.57,3.26,62.37,44.74,
+"2023-05-04 05:35:10",79.61,13.03,3.32,63.24,45.63,
+"2023-05-03 05:18:53",79.13,13.48,3.26,62.37,44.76,
+"2023-05-02 05:24:38",78.60,14.26,3.20,61.13,43.59,
+"2023-05-01 08:52:43",78.74,14.32,3.20,61.21,43.65,
+"2023-04-30 08:40:00",78.80,13.77,3.23,61.78,44.20,
+"2023-04-28 05:33:47",80.59,13.09,3.37,64.12,46.42,
+"2023-04-27 05:29:36",79.77,13.68,3.29,62.79,45.11,
+"2023-04-26 05:33:25",79.88,13.54,3.30,63.03,45.34,
+"2023-04-25 05:33:55",79.11,13.64,3.25,62.21,44.59,
+"2023-04-24 05:34:51",79.38,13.63,3.27,62.46,44.81,
+"2023-04-23 08:09:48",78.79,13.37,3.25,62.16,44.58,
+"2023-04-22 07:52:48",78.33,13.47,3.22,61.62,44.09,
+"2023-04-21 05:34:07",79.53,14.17,3.25,62.10,44.44,
+"2023-04-20 05:11:36",79.50,13.51,3.28,62.69,45.04,
+"2023-04-19 05:33:28",79.47,13.66,3.27,62.52,44.87,
+"2023-04-18 05:23:37",79.69,13.39,3.30,62.99,45.33,
+"2023-04-17 05:37:31",80.32,13.32,3.34,63.65,45.94,
+"2023-04-16 08:43:48",79.69,13.42,3.30,62.95,45.29,
+"2023-04-14 07:07:13",79.44,13.44,3.28,62.70,45.06,
+"2023-04-13 05:19:04",79.27,13.70,3.26,62.29,44.66,
+"2023-04-12 07:10:51",78.28,13.47,3.22,61.58,44.05,
+"2023-04-11 05:26:37",79.23,13.45,3.27,62.50,44.88,
+"2023-04-10 07:24:01",78.78,13.85,3.23,61.70,44.11,
+"2023-04-09 07:07:15",78.90,13.82,3.23,61.83,44.23,
+"2023-04-08 08:04:43",79.22,13.40,3.27,62.54,44.92,
+"2023-04-07 06:26:18",79.20,13.42,3.27,62.50,44.88,
+"2023-04-06 06:18:49",78.46,13.34,3.24,61.86,44.32,
+"2023-04-04 05:21:34",79.66,13.43,3.30,62.92,45.26,
+"2023-03-31 05:33:24",78.34,12.95,3.25,62.12,44.61,
+"2023-03-30 05:10:40",78.33,12.88,3.26,62.18,44.67,
+"2023-03-29 05:12:04",78.93,13.08,3.28,62.55,44.98,
+"2023-03-28 04:33:39",78.60,13.17,3.25,62.16,44.61,
+"2023-03-27 05:00:07",78.75,13.20,3.26,62.27,44.71,
+"2023-03-26 09:23:14",78.72,12.89,3.28,62.54,45.00,
+"2023-03-25 09:12:34",78.64,13.59,3.23,61.80,44.24,
+"2023-03-24 05:27:35",79.27,13.70,3.26,62.30,44.67,
+"2023-03-23 05:33:26",79.26,13.29,3.28,62.68,45.06,
+"2023-03-22 05:34:19",78.96,13.03,3.28,62.63,45.06,
+"2023-03-21 05:25:15",79.67,13.12,3.32,63.21,45.58,
+"2023-03-20 05:33:46",79.71,13.42,3.30,62.97,45.31,
+"2023-03-19 08:44:13",78.92,12.88,3.29,62.74,45.19,
+"2023-03-18 07:46:41",78.99,13.45,3.26,62.27,44.67,
+"2023-03-17 05:34:06",79.00,13.09,3.28,62.61,45.04,
+"2023-03-16 05:33:55",78.94,13.29,3.27,62.37,44.79,
+"2023-03-15 05:25:42",78.92,13.11,3.28,62.52,44.95,
+"2023-03-14 05:30:14",78.84,13.09,3.27,62.46,44.89,
+"2023-03-13 05:34:13",78.64,13.04,3.27,62.32,44.78,
+"2023-03-12 09:39:52",77.64,12.71,3.23,61.68,44.25,
+"2023-03-11 09:45:01",77.82,12.63,3.25,61.93,44.49,
+"2023-03-10 05:30:03",78.50,13.57,3.23,61.69,44.14,
+"2023-03-09 05:34:06",79.74,13.13,3.32,63.27,45.63,
+"2023-03-08 05:34:30",78.21,12.90,3.25,62.04,44.55,
+"2023-03-07 05:34:45",78.75,13.37,3.25,62.12,44.55,
+"2023-03-06 05:34:16",78.87,13.47,3.25,62.13,44.54,
+"2023-03-05 10:05:28",78.01,13.40,3.21,61.38,43.88,
+"2023-03-04 08:28:08",78.51,13.63,3.22,61.64,44.09,
+"2023-03-03 05:34:10",79.05,13.12,3.28,62.64,45.06,
+"2023-03-02 05:33:14",78.09,13.58,3.21,61.29,43.78,
+"2023-03-01 05:35:15",78.32,13.48,3.22,61.61,44.08,
+"2023-02-28 06:03:56",78.57,13.51,3.23,61.82,44.26,
+"2023-02-27 04:59:52",79.56,14.17,3.25,62.12,44.46,
+"2023-02-26 08:35:09",79.64,13.37,3.30,62.95,45.30,
+"2023-02-25 09:16:41",78.79,13.65,3.24,61.90,44.31,
+"2023-02-24 05:33:39",78.66,13.66,3.23,61.76,44.19,
+"2023-02-23 05:34:02",77.91,12.84,3.24,61.82,44.36,
+"2023-02-22 06:04:04",78.12,13.16,3.23,61.72,44.22,
+"2023-02-21 05:34:07",78.06,12.89,3.24,61.91,44.42,
+"2023-02-18 03:35:04",78.36,13.47,3.23,61.65,44.12,
+"2023-02-17 05:13:09",78.64,13.09,3.26,62.27,44.72,
+"2023-02-16 04:56:52",79.51,13.02,3.31,63.16,45.55,
+"2023-02-15 05:51:37",79.47,13.07,3.31,63.08,45.47,
+"2023-02-14 07:07:52",78.23,12.52,3.27,62.42,44.97,
+"2023-02-13 05:35:07",77.56,12.99,3.21,61.34,43.90,
+"2023-02-12 09:25:50",77.71,13.27,3.20,61.22,43.75,
+"2023-02-11 08:47:26",76.93,12.66,3.20,61.06,43.68,
+"2023-02-10 05:35:07",78.06,13.02,3.23,61.79,44.29,
+"2023-02-09 05:34:01",77.88,12.88,3.23,61.75,44.29,
+"2023-02-08 05:39:16",78.03,13.35,3.21,61.45,43.95,
+"2023-02-07 05:34:59",79.22,13.05,3.30,62.86,45.27,
+"2023-02-06 05:08:16",78.46,13.47,3.23,61.75,44.20,
+"2023-02-05 08:35:02",78.04,12.92,3.24,61.87,44.39,
+"2023-02-04 08:50:58",77.71,12.74,3.23,61.72,44.28,
+"2023-02-03 05:03:30",77.38,13.03,3.20,61.13,43.70,
+"2023-02-02 05:33:53",77.62,12.41,3.25,61.95,44.55,
+"2023-02-01 06:13:37",78.26,12.80,3.26,62.19,44.70,
+"2023-01-31 05:04:05",76.97,12.71,3.20,61.05,43.67,
+"2023-01-30 05:03:14",77.53,13.31,3.19,61.01,43.56,
+"2023-01-29 09:23:28",77.49,13.29,3.19,60.99,43.55,
+"2023-01-28 10:37:52",76.79,12.78,3.18,60.81,43.44,
+"2023-01-27 05:31:31",78.32,13.34,3.23,61.74,44.21,
+"2023-01-26 05:33:37",77.43,13.12,3.20,61.10,43.66,
+"2023-01-25 05:34:40",77.67,12.74,3.23,61.68,44.24,
+"2023-01-24 05:33:46",77.68,13.03,3.21,61.42,43.96,
+"2023-01-23 05:17:08",78.53,13.92,3.21,61.38,43.84,
+"2023-01-22 09:58:42",77.34,13.46,3.17,60.69,43.27,
+"2023-01-21 10:28:49",77.88,13.72,3.19,60.96,43.48,
+"2023-01-20 05:31:38",78.62,13.56,3.23,61.81,44.25,
+"2023-01-19 05:31:00",78.39,13.92,3.20,61.24,43.71,
+"2023-01-18 05:24:57",78.74,13.21,3.26,62.25,44.69,
+"2023-01-17 05:08:38",78.73,13.73,3.23,61.76,44.18,
+"2023-01-16 05:33:34",78.60,13.87,3.22,61.50,43.94,
+"2023-01-15 09:15:45",78.81,13.68,3.24,61.88,44.30,
+"2023-01-14 09:05:53",78.50,14.29,3.19,61.01,43.48,
+"2023-01-13 05:34:23",79.11,13.67,3.25,62.17,44.55,
+"2023-01-12 05:33:55",79.85,13.56,3.30,62.98,45.29,
+"2023-01-11 05:33:30",79.22,14.18,3.23,61.80,44.18,
+"2023-01-10 05:34:03",79.63,14.01,3.26,62.35,44.68,
+"2023-01-09 05:34:28",79.15,14.00,3.24,61.90,44.28,
+"2023-01-08 19:26:32",79.76,13.33,3.31,63.10,45.44,
+"2023-01-06 20:53:16",80.83,12.87,3.40,64.54,46.86,
+"2023-01-05 18:43:00",79.58,12.88,3.33,63.35,45.76,
+"2023-01-04 17:30:07",80.77,13.20,3.37,64.18,46.45,
+"2023-01-03 18:30:24",79.62,12.87,3.33,63.40,45.80,
+"2023-01-01 19:23:32",80.18,12.40,3.39,64.37,46.83,
+"2022-12-30 19:14:49",78.42,12.53,3.28,62.59,45.13,
+"2022-12-28 19:22:04",79.44,13.14,3.30,62.98,45.37,
+"2022-12-26 19:04:40",80.45,13.79,3.32,63.33,45.57,
+"2022-12-25 18:05:49",80.04,12.88,3.35,63.79,46.16,
+"2022-12-23 19:05:21",80.40,12.63,3.39,64.37,46.76,
+"2022-12-22 20:02:24",79.31,13.16,3.29,62.84,45.23,
+"2022-12-21 20:36:40",79.69,12.97,3.33,63.38,45.76,
+"2022-12-20 18:59:37",80.01,12.65,3.37,63.99,46.40,
+"2022-12-19 18:51:01",79.48,12.85,3.32,63.29,45.71,
+"2022-12-17 17:50:41",78.42,11.97,3.32,63.11,45.75,
+"2022-12-16 19:14:38",79.49,12.79,3.33,63.36,45.78,
+"2022-12-15 18:33:21",78.59,12.88,3.27,62.42,44.90,
+"2022-12-14 18:11:24",77.88,12.36,3.27,62.24,44.83,
+"2022-12-13 18:18:46",78.88,12.73,3.30,62.84,45.31,
+"2022-12-07 18:10:26",78.83,12.30,3.32,63.19,45.74,
+"2022-12-05 20:44:23",79.12,12.77,3.31,63.03,45.48,
+"2022-12-04 16:51:52",79.38,13.26,3.29,62.81,45.19,
+"2022-12-03 16:47:27",79.64,12.63,3.35,63.64,46.08,
+"2022-12-01 19:01:28",79.04,12.46,3.32,63.24,45.75,
+"2022-11-29 18:54:14",78.55,12.85,3.27,62.41,44.89,
+"2022-11-27 18:43:50",78.93,13.29,3.27,62.37,44.78,
+"2022-11-26 16:48:41",78.79,12.87,3.28,62.62,45.08,
+"2022-11-25 18:41:41",78.34,12.76,3.27,62.30,44.81,
+"2022-11-24 17:06:29",78.43,13.04,3.25,62.12,44.60,
+"2022-11-22 17:55:17",77.49,12.16,3.26,62.06,44.71,
+"2022-11-21 17:55:44",77.52,11.68,3.29,62.54,45.28,
+"2022-11-19 20:27:30",78.65,12.92,3.27,62.45,44.91,
+"2022-11-18 16:45:51",78.89,12.50,3.31,63.06,45.57,
+"2022-11-17 19:21:08",78.17,11.61,3.33,63.22,45.96,
+"2022-11-15 19:00:28",77.76,12.49,3.25,62.00,44.58,
+"2022-11-14 17:14:38",78.33,12.36,3.29,62.66,45.23,
+"2022-11-11 17:34:29",78.09,12.89,3.24,61.94,44.46,
+"2022-11-09 17:23:58",77.73,12.57,3.24,61.90,44.47,
+"2022-11-08 18:36:55",77.55,12.37,3.25,61.92,44.53,
+"2022-11-07 17:13:57",78.17,12.55,3.27,62.33,44.88,
+"2022-11-05 17:02:29",78.23,13.35,3.22,61.63,44.11,
+"2022-10-28 16:51:48",77.60,12.89,3.22,61.47,44.03,
+"2022-10-27 19:12:19",79.20,12.87,3.30,63.00,45.43,
+"2022-10-26 20:11:31",78.57,12.50,3.29,62.76,45.29,
+"2022-10-24 17:05:56",79.40,12.56,3.34,63.49,45.96,
+"2022-10-21 18:33:51",78.60,12.55,3.29,62.74,45.26,
+"2022-10-20 17:52:30",78.78,12.63,3.30,62.84,45.34,
+"2022-10-19 17:16:00",79.43,12.40,3.35,63.66,46.15,
+"2022-10-18 18:47:15",78.75,12.38,3.31,63.04,45.58,
+"2022-10-17 16:53:53",78.95,11.97,3.35,63.62,46.24,
+"2022-10-15 19:15:19",78.12,13.00,3.24,61.87,44.37,
+"2022-10-13 18:42:10",78.40,12.56,3.28,62.54,45.07,
+"2022-10-11 19:05:26",77.48,12.11,3.26,62.10,44.75,
+"2022-10-10 15:53:36",77.30,12.48,3.23,61.57,44.19,
+"2022-10-07 17:07:07",78.21,12.76,3.26,62.18,44.70,
+"2022-10-04 19:03:37",78.28,11.29,3.36,63.61,46.45,
+"2022-09-23 16:45:05",77.34,12.08,3.25,61.99,44.66,
+"2022-09-22 19:06:40",77.55,11.62,3.30,62.62,45.38,
+"2022-09-21 19:44:12",77.62,11.88,3.28,62.45,45.14,
+"2022-09-18 18:53:48",78.16,13.08,3.24,61.83,44.33,
+"2022-09-16 19:03:06",77.72,11.71,3.30,62.69,45.42,
+"2022-09-12 19:05:51",77.89,11.75,3.31,62.82,45.53,
+"2022-09-10 19:05:39",78.17,12.45,3.28,62.43,44.99,
+"2022-09-09 18:56:00",77.62,12.40,3.25,61.95,44.55,
+"2022-09-08 19:22:45",77.37,11.76,3.28,62.32,45.05,
+"2022-09-05 18:40:54",77.10,11.64,,,,
+"2022-09-05 18:36:50",77.21,11.67,3.27,62.25,45.01,
+"2022-09-01 17:57:31",78.46,12.35,3.30,62.79,45.35,
+"2022-08-31 18:27:24",77.68,13.12,3.21,61.34,43.88,
+"2022-08-30 18:43:43",79.00,12.51,3.32,63.16,45.66,
+"2022-08-29 17:07:10",79.22,12.37,3.34,63.50,46.01,
+"2022-08-28 19:35:18",78.74,12.81,3.28,62.63,45.10,
+"2022-08-27 19:20:23",79.47,13.22,3.30,62.94,45.31,
+"2022-08-26 19:06:08",78.90,12.87,3.29,62.72,45.17,
+"2022-08-25 19:33:55",79.27,12.06,3.36,63.83,46.41,
+"2022-08-24 18:14:18",79.31,12.39,3.34,63.57,46.07,
+"2022-08-23 19:18:47",79.93,12.53,3.37,64.01,46.45,
+"2022-08-22 17:26:57",79.64,12.16,3.38,64.08,46.62,
+"2022-08-21 20:40:33",80.01,12.58,3.37,64.04,46.47,
+"2022-08-20 19:44:20",79.69,13.66,3.28,62.73,45.06,
+"2022-08-18 17:57:30",79.35,12.61,3.33,63.39,45.85,
+"2022-08-17 19:10:41",80.76,12.08,3.45,65.21,47.73,
+"2022-08-15 17:29:54",79.54,12.89,3.32,63.31,45.71,
+"2022-08-14 18:51:35",78.96,13.47,3.26,62.22,44.62,
+"2022-08-12 18:57:49",79.23,12.74,3.31,63.16,45.60,
+"2022-08-11 19:20:55",79.47,12.48,3.35,63.63,46.11,
+"2022-08-10 18:41:29",79.70,12.47,3.36,63.85,46.31,
+"2022-08-08 19:28:14",79.23,12.30,3.34,63.56,46.09,
+"2022-08-06 17:07:19",80.37,13.03,3.36,63.96,46.28,
+"2022-08-04 18:30:22",80.12,11.84,3.43,64.83,47.45,
+"2022-08-01 21:03:48",79.51,13.72,3.27,62.51,44.85,
+"2022-07-31 19:26:39",80.02,13.83,3.29,62.88,45.17,
+"2022-07-30 19:12:18",79.61,13.61,3.28,62.70,45.04,
+"2022-07-29 17:04:59",79.31,12.82,3.31,63.16,45.59,
+"2022-07-28 17:44:02",80.12,12.70,3.37,64.03,46.42,
+"2022-07-27 19:18:49",79.98,14.11,3.27,62.58,44.87,
+"2022-07-25 19:15:39",79.81,12.63,3.35,63.81,46.24,
+"2022-07-24 15:40:57",80.59,13.12,3.37,64.09,46.38,
+"2022-07-23 19:50:42",81.64,14.04,3.37,64.22,46.33,
+"2022-07-22 19:47:08",80.60,13.48,3.34,63.76,46.01,
+"2022-07-21 18:10:17",80.70,12.68,3.40,64.60,46.96,
+"2022-07-20 19:44:47",80.33,12.58,3.39,64.35,46.75,
+"2022-07-18 18:24:22",80.85,13.02,3.39,64.43,46.71,
+"2022-07-17 21:01:01",82.30,13.72,3.42,65.15,47.22,
+"2022-07-16 19:39:22",81.19,13.98,3.34,63.85,46.01,
+"2022-07-13 18:57:18",81.02,13.15,3.39,64.46,46.72,
+"2022-07-11 18:09:26",80.44,13.63,3.33,63.47,45.72,
+"2022-07-08 19:22:48",81.21,13.59,3.37,64.23,46.41,
+"2022-07-05 18:55:46",81.29,13.56,3.38,64.33,46.51,
+"2022-07-04 19:06:25",82.07,13.09,3.45,65.51,47.70,
+"2022-07-01 19:08:42",80.58,13.39,3.35,63.82,46.08,
+"2022-06-30 19:14:33",80.92,13.13,3.38,64.39,46.65,
+"2022-06-29 19:01:15",81.67,13.34,3.41,64.89,47.07,
+"2022-06-27 18:42:57",81.83,13.55,3.41,64.86,46.99,
+"2022-06-24 17:41:13",81.60,14.45,3.34,63.80,45.90,
+"2022-06-23 18:21:03",81.55,13.19,3.42,64.92,47.13,
+"2022-06-22 19:08:37",81.59,13.81,3.38,64.39,46.52,
+"2022-06-21 19:24:36",81.05,14.28,3.32,63.43,45.60,
+"2022-06-19 20:04:18",81.31,14.30,3.33,63.66,45.80,
+"2022-06-16 18:26:23",81.46,14.18,3.35,63.92,46.05,
+"2022-06-15 19:24:25",81.54,14.96,3.30,63.26,45.38,
+"2022-06-14 19:10:07",82.32,14.36,3.38,64.56,46.58,
+"2022-06-13 18:30:39",81.42,13.93,3.36,64.12,46.25,
+"2022-06-12 19:26:40",82.19,14.44,3.37,64.37,46.40,
+"2022-06-09 18:00:55",82.14,14.52,3.36,64.24,46.28,
+"2022-06-08 18:53:09",81.90,13.47,3.42,65.00,47.13,
+"2022-06-07 18:02:11",82.19,13.57,3.43,65.19,47.28,
+"2022-06-06 18:23:36",81.51,14.02,3.36,64.11,46.24,
+"2022-06-01 19:43:04",82.42,14.89,3.36,64.16,46.17,
+"2022-05-31 18:25:40",82.46,14.95,3.35,64.14,46.14,
+"2022-05-30 22:09:04",82.66,15.16,3.35,64.13,46.12,
+"2022-05-29 18:25:31",82.64,15.77,3.32,63.54,45.58,
+"2022-05-27 19:37:44",82.62,14.90,3.37,64.34,46.32,
+"2022-05-25 19:12:01",83.69,14.41,3.46,65.81,47.68,
+"2022-05-22 19:29:02",82.25,16.84,3.24,62.15,44.43,
+"2022-05-20 19:16:18",82.44,13.87,3.42,65.14,47.18,
+"2022-05-19 18:49:37",83.05,14.39,3.42,65.23,47.17,
+"2022-05-18 19:02:21",83.07,14.66,3.40,64.99,46.91,
+"2022-05-16 18:29:55",82.49,14.61,3.38,64.48,46.48,
+"2022-05-14 19:41:59",83.08,17.24,3.26,62.57,44.78,
+"2022-05-13 19:25:12",83.35,16.39,3.32,63.62,45.63,
+"2022-05-12 18:01:47",83.56,14.76,3.42,65.36,47.22,
+"2022-05-10 19:16:50",83.31,15.01,3.40,64.89,46.78,
+"2022-05-08 20:12:13",83.53,14.75,3.42,65.35,47.22,
+"2022-05-07 19:53:00",83.19,16.20,3.32,63.65,45.65,
+"2022-05-03 18:20:54",82.64,15.14,3.35,64.14,46.13,
+"2022-05-02 19:26:03",83.45,14.90,3.41,65.13,47.00,
+"2022-04-25 18:04:09",83.89,14.92,3.43,65.52,47.34,
+"2022-04-19 20:27:20",84.24,16.42,3.36,64.44,46.30,
+"2022-04-08 19:23:36",82.66,16.81,3.26,62.58,44.78,
+"2022-04-07 19:15:35",83.68,16.85,3.31,63.50,45.53,
+"2022-04-05 19:38:22",82.84,15.96,3.32,63.55,45.58,
+"2022-04-02 18:32:38",83.15,15.61,3.35,64.17,46.12,
+"2022-04-01 19:19:56",83.50,16.04,3.35,64.10,46.03,
+"2022-03-31 19:27:41",82.15,16.25,3.27,62.61,44.80,
+"2022-03-28 18:52:14",83.76,15.36,3.40,64.98,46.83,
+"2022-03-25 17:21:31",83.94,15.96,3.37,64.58,46.44,
+"2022-03-24 19:21:46",83.42,15.23,3.39,64.79,46.67,
+"2022-03-23 18:54:00",84.05,16.21,3.36,64.47,46.33,
+"2022-03-19 19:12:18",83.12,15.11,3.38,64.61,46.53,
+"2022-03-16 18:50:53",82.22,16.11,3.28,62.82,44.97,
+"2022-03-14 19:36:27",82.38,15.11,3.34,63.91,45.94,
+"2022-03-13 19:41:18",82.38,15.57,3.31,63.48,45.54,
+"2022-03-09 18:53:56",83.08,15.69,3.34,64.04,46.00,
+"2022-03-08 19:07:54",82.41,15.40,3.32,63.67,45.71,
+"2022-03-07 19:04:32",82.19,15.07,3.33,63.78,45.82,
+"2022-03-04 17:11:02",82.23,15.27,3.32,63.62,45.68,
+"2022-03-02 18:26:27",81.95,15.84,3.28,62.82,44.97,
+"2022-03-01 18:48:09",82.70,15.66,3.33,63.70,45.72,
+"2022-02-24 19:04:11",82.18,15.01,3.33,63.82,45.86,
+"2022-02-23 19:28:23",81.92,14.92,3.33,63.66,45.73,
+"2022-02-21 18:48:29",82.04,15.26,3.31,63.45,45.53,
+"2022-02-19 20:25:19",83.22,16.09,3.33,63.79,45.78,
+"2022-02-16 16:55:18",83.08,15.16,3.37,64.53,46.46,
+"2022-02-13 17:02:21",83.16,15.56,3.35,64.22,46.16,
+"2022-02-08 19:51:14",82.92,15.26,3.36,64.29,46.25,
+"2022-02-07 19:04:23",83.71,15.36,3.40,64.94,46.79,
+"2022-02-03 18:55:24",83.14,15.04,3.38,64.70,46.62,
+"2022-02-02 19:18:34",83.45,15.20,3.39,64.85,46.73,
+"2022-01-31 18:35:30",82.68,16.58,3.28,62.81,44.97,
+"2022-01-26 18:26:56",82.08,15.47,3.30,63.29,45.39,
+"2022-01-24 18:55:49",82.38,15.28,3.33,63.75,45.79,
+"2022-01-21 17:52:53",82.82,15.61,3.33,63.86,45.86,
+"2022-01-19 18:09:38",82.86,16.06,3.31,63.47,45.51,
+"2022-01-18 18:40:34",83.10,15.64,3.35,64.10,46.06,
+"2022-01-17 18:38:19",82.01,15.72,3.29,62.99,45.12,
+"2022-01-16 20:40:44",82.06,14.92,3.33,63.79,45.85,
+"2022-01-12 18:27:36",81.23,15.93,3.24,62.05,44.34,
+"2022-01-10 18:51:07",81.37,14.59,3.32,63.44,45.58,
+"2022-01-08 19:06:11",82.19,14.85,3.34,63.98,46.01,
+"2022-01-06 17:42:05",82.62,14.90,3.36,64.34,46.32,
+"2021-12-31 17:41:52",82.57,16.64,3.27,62.64,44.83,
+"2021-12-30 17:13:36",82.26,15.13,3.33,63.78,45.82,
+"2021-12-26 18:33:02",82.29,15.80,3.30,63.18,45.28,
+"2021-12-21 19:40:48",81.89,15.89,3.27,62.71,44.89,
+"2021-12-19 18:22:37",82.11,16.69,3.24,62.16,44.45,
+"2021-12-14 19:52:22",80.99,14.60,3.30,63.09,45.27,
+"2021-12-13 20:01:45",81.57,14.20,3.35,64.01,46.12,
+"2021-12-09 19:05:46",81.42,14.84,3.30,63.26,45.40,
+"2021-12-08 18:38:03",82.18,14.72,3.35,64.09,46.12,
+"2021-12-07 19:23:40",82.85,14.48,3.40,64.94,46.90,
+"2021-12-03 17:09:27",81.28,13.97,3.35,63.94,46.09,
+"2021-12-02 19:42:44",81.30,14.02,3.35,63.91,46.06,
+"2021-12-01 19:13:53",80.81,14.48,3.29,63.02,45.23,
+"2021-11-30 20:29:34",80.67,14.92,3.26,62.47,44.72,
+"2021-11-29 19:24:29",80.50,14.67,3.27,62.55,44.80,
+"2021-11-26 18:28:01",81.25,14.47,3.32,63.45,45.60,
+"2021-11-25 19:15:13",81.98,14.86,3.33,63.77,45.84,
+"2021-11-24 20:17:11",81.96,14.85,3.33,63.76,45.83,
+"2021-11-22 19:00:17",81.85,15.04,3.32,63.48,45.57,
+"2021-11-19 18:21:35",81.62,14.93,3.31,63.37,45.48,
+"2021-11-17 18:54:57",81.37,15.19,3.28,62.87,45.05,
+"2021-11-16 18:48:30",81.05,14.26,3.32,63.46,45.63,
+"2021-11-14 16:54:13",81.73,16.00,3.26,62.46,44.68,
+"2021-11-12 18:09:07",81.33,15.21,3.28,62.83,45.01,
+"2021-11-11 19:03:41",80.88,14.26,3.31,63.29,45.48,
+"2021-11-10 18:55:49",81.58,14.56,3.33,63.67,45.78,
+"2021-11-09 17:50:19",80.90,14.02,3.32,63.54,45.73,
+"2021-11-08 18:41:13",81.70,14.90,3.32,63.47,45.58,
+"2021-11-06 17:43:33",81.63,15.63,3.27,62.71,44.90,
+"2021-11-05 18:12:10",81.43,15.53,3.27,62.61,44.82,
+"2021-11-04 19:10:31",81.26,14.80,3.30,63.15,45.31,
+"2021-11-03 18:48:54",81.45,13.92,3.36,64.15,46.28,
+"2021-11-02 17:47:51",81.34,14.56,3.32,63.46,45.59,
+"2021-10-28 18:13:04",81.90,14.87,3.33,63.68,45.76,
+"2021-10-27 18:56:37",82.37,14.68,3.36,64.31,46.32,
+"2021-10-26 18:29:42",82.43,15.30,3.33,63.79,45.82,
+"2021-10-25 19:25:15",82.15,14.66,3.35,64.12,46.16,
+"2021-10-24 20:17:02",82.50,15.88,3.30,63.30,45.38,
+"2021-10-22 20:44:33",81.99,15.69,3.29,63.00,45.14,
+"2021-10-21 19:00:13",82.39,14.12,3.40,64.86,46.88,
+"2021-10-19 17:52:43",83.18,,,,,
+"2021-10-18 18:38:29",82.52,14.62,3.38,64.51,46.50,
+"2021-10-16 17:48:08",82.76,15.55,3.33,63.86,45.86,
+"2021-10-15 19:08:45",82.62,16.00,3.30,63.30,45.38,
+"2021-10-12 18:12:21",81.90,14.80,3.33,63.75,45.83,
+"2021-10-11 19:55:49",83.16,16.32,3.31,63.51,45.55,
+"2021-10-10 17:34:35",82.45,16.03,3.29,63.11,45.22,
+"2021-10-09 18:58:59",83.96,15.93,3.37,64.64,46.50,
+"2021-10-08 20:23:10",82.08,16.08,3.27,62.71,44.90,
+"2021-10-07 18:30:53",82.32,14.41,3.38,64.52,46.54,
+"2021-10-06 19:19:09",81.66,15.23,3.30,63.12,45.26,
+"2021-10-05 19:24:45",82.79,15.80,3.32,63.66,45.68,
+"2021-10-04 18:39:14",82.14,14.22,3.38,64.52,46.57,
+"2021-10-01 20:03:46",81.07,15.21,3.27,62.58,44.81,
+"2021-09-29 18:52:54",82.16,14.88,3.34,63.92,45.97,
+"2021-09-27 18:16:46",81.66,14.04,3.36,64.24,46.34,
+"2021-09-26 20:07:10",82.08,15.74,3.29,63.04,45.17,
+"2021-09-23 19:14:39",81.41,14.55,3.32,63.52,45.65,
+"2021-09-22 18:11:49",82.07,15.16,3.32,63.57,45.64,
+"2021-09-20 18:09:37",81.45,14.28,3.34,63.81,45.94,
+"2021-09-19 19:21:08",83.61,17.11,3.29,63.19,45.29,
+"2021-09-17 17:08:02",82.77,14.69,3.38,64.68,46.64,
+"2021-09-14 20:02:21",81.34,14.72,3.31,63.29,45.44,
+"2021-09-13 18:40:26",82.50,14.25,3.40,64.83,46.84,
+"2021-09-12 18:51:17",82.22,15.83,3.29,63.08,45.20,
+"2021-09-10 20:02:47",81.81,14.84,3.32,63.62,45.71,
+"2021-09-03 20:26:36",81.36,14.99,3.29,63.06,45.23,
+"2021-09-01 19:25:24",81.08,14.19,3.32,63.55,45.72,
+"2021-08-19 22:31:48",81.44,15.15,3.29,62.98,45.15,
+"2021-08-16 20:19:53",80.47,15.61,3.22,61.63,44.01,
+"2021-08-15 20:48:59",80.66,14.17,3.30,63.17,45.38,
+"2021-08-13 20:23:53",81.16,14.06,3.34,63.75,45.91,
+"2021-08-10 20:07:27",81.44,13.86,3.36,64.20,46.34,
+"2021-08-09 19:27:48",81.11,13.99,3.34,63.77,45.94,
+"2021-08-05 19:34:31",82.11,14.12,3.38,64.59,46.64,
+"2021-08-03 20:14:18",82.34,15.03,3.34,63.96,45.99,
+"2021-08-01 17:23:31",81.69,15.39,3.29,63.00,45.15,
+"2021-07-31 18:18:59",81.70,15.43,3.29,62.96,45.12,
+"2021-07-30 19:59:07",81.59,15.53,3.28,62.76,44.95,
+"2021-07-29 19:27:21",81.56,14.41,3.34,63.80,45.91,
+"2021-07-27 19:43:23",82.58,14.90,3.36,64.30,46.29,
+"2021-07-24 19:20:37",82.40,14.29,3.39,64.71,46.72,
+"2021-07-20 19:36:48",82.13,14.01,3.39,64.71,46.77,
+"2021-07-14 19:49:18",81.93,14.68,3.34,63.90,45.97,
+"2021-07-11 19:37:28",81.23,16.06,3.23,61.92,44.25,
+"2021-07-09 20:35:03",81.94,15.89,3.27,62.76,44.94,
+"2021-07-04 18:05:13",82.40,15.71,3.31,63.37,45.45,
+"2021-07-03 20:10:54",82.53,15.45,3.33,63.74,45.77,
+"2021-07-01 19:27:10",81.87,13.74,3.40,64.72,46.82,
+"2021-06-30 18:47:10",82.78,15.30,3.35,64.12,46.10,
+"2021-06-29 20:09:32",81.86,15.91,3.27,62.67,44.86,
+"2021-06-27 17:11:53",80.97,15.30,3.26,62.40,44.65,
+"2021-06-25 20:32:55",80.57,15.74,3.22,61.60,43.98,
+"2021-06-23 20:05:50",80.05,14.67,3.24,62.12,44.44,
+"2021-06-10 17:37:00",80.62,15.51,3.23,61.86,44.20,
+"2021-06-08 20:13:04",79.95,14.54,3.25,62.15,44.48,
+"2021-06-07 20:30:42",80.01,13.85,3.29,62.86,45.15,
+"2021-06-06 20:21:03",80.32,14.39,3.27,62.64,44.90,
+"2021-06-05 20:29:44",81.21,15.42,3.26,62.52,44.75,
+"2021-06-04 20:58:27",81.37,14.53,3.32,63.50,45.64,
+"2021-06-02 20:34:27",80.30,14.07,3.29,62.93,45.19,
+"2021-06-01 19:41:41",79.65,14.57,3.23,61.83,44.20,
+"2021-05-28 20:52:27",80.38,14.08,3.29,62.99,45.24,
+"2021-05-21 20:03:48",81.29,15.58,3.26,62.44,44.68,
+"2021-05-20 19:01:51",81.20,14.42,3.32,63.44,45.60,
+"2021-05-19 17:12:19",81.30,15.04,3.29,62.96,45.14,
+"2021-05-17 16:16:53",81.45,13.80,3.37,64.27,46.41,
+"2021-05-16 18:02:40",81.81,15.03,3.31,63.45,45.56,
+"2021-05-15 17:56:16",81.21,15.44,3.26,62.49,44.73,
+"2021-05-14 15:58:19",82.07,15.01,3.33,63.71,45.78,
+"2021-05-13 18:36:26",81.17,14.22,3.33,63.61,45.77,
+"2021-05-12 19:05:58",82.23,15.11,3.33,63.77,45.82,
+"2021-05-09 20:52:59",81.87,13.60,3.40,64.84,46.96,
+"2021-05-08 18:59:32",81.83,15.12,3.31,63.39,45.50,
+"2021-05-07 19:37:13",80.92,14.49,3.30,63.12,45.31,
+"2021-05-06 19:08:58",80.77,13.61,3.34,63.81,46.03,
+"2021-05-05 18:05:44",80.93,13.02,3.39,64.51,46.78,
+"2021-05-04 18:49:47",81.02,13.25,3.38,64.38,46.60,
+"2021-04-30 19:49:00",80.50,14.22,3.29,62.97,45.21,
+"2021-04-29 20:12:01",79.96,14.50,3.25,62.20,44.52,
+"2021-04-27 18:52:00",81.05,13.24,3.38,64.42,46.65,
+"2021-04-25 19:27:30",81.27,14.43,3.32,63.51,45.66,
+"2021-04-24 19:15:29",81.95,13.81,3.40,64.74,46.82,
+"2021-04-23 19:57:48",80.59,13.81,3.32,63.44,45.67,
+"2021-04-22 19:57:28",80.82,15.15,3.26,62.41,44.67,
+"2021-04-21 20:16:09",80.35,15.46,3.22,61.66,44.03,
+"2021-04-20 20:03:31",80.10,15.15,3.22,61.72,44.09,
+"2021-04-19 19:20:25",80.57,13.84,3.32,63.40,45.63,
+"2021-04-18 18:30:44",81.20,14.67,3.30,63.21,45.38,
+"2021-04-16 21:18:21",79.90,15.53,3.19,61.16,43.63,
+"2021-04-14 17:43:06",80.39,15.73,3.21,61.43,43.85,
+"2021-04-12 19:43:59",80.52,14.84,3.26,62.41,44.69,
+"2021-04-10 17:44:45",81.75,15.39,3.29,63.05,45.20,
+"2021-04-09 19:16:42",80.49,13.78,3.32,63.38,45.62,
+"2021-04-07 17:04:58",80.74,15.58,3.23,61.91,44.25,
+"2021-04-06 19:33:44",80.75,14.66,3.28,62.80,45.03,
+"2021-04-03 18:57:01",80.95,14.39,3.30,63.24,45.43,
+"2021-03-31 20:03:46",79.64,14.76,3.22,61.65,44.05,
+"2021-03-27 18:35:20",80.71,14.74,3.27,62.69,44.92,
+"2021-03-25 19:23:20",80.56,14.82,3.26,62.47,44.74,
+"2021-03-23 19:18:55",80.84,15.29,3.25,62.28,44.56,
+"2021-03-22 19:03:55",80.68,14.72,3.27,62.67,44.92,
+"2021-03-21 19:17:02",80.64,15.01,3.26,62.36,44.63,
+"2021-03-20 18:11:51",80.31,15.00,3.24,62.05,44.38,
+"2021-03-18 19:31:21",80.53,14.26,3.29,62.96,45.20,
+"2021-03-17 19:53:26",80.47,14.40,3.28,62.77,45.02,
+"2021-03-16 19:18:37",81.27,13.98,3.35,63.94,46.09,
+"2021-03-15 19:36:47",80.15,13.64,3.31,63.19,45.47,
+"2021-03-13 20:13:25",80.50,15.34,3.23,61.91,44.25,
+"2021-03-12 19:22:18",80.46,15.07,3.24,62.13,44.44,
+"2021-03-10 18:40:38",80.27,14.20,3.28,62.77,45.04,
+"2021-03-08 19:02:44",80.94,13.55,3.35,64.01,46.22,
+"2021-03-07 19:22:16",80.50,14.64,3.27,62.58,44.84,
+"2021-03-05 20:12:59",81.23,15.80,3.24,62.17,44.46,
+"2021-03-02 19:14:30",80.28,14.62,3.26,62.38,44.68,
+"2021-03-01 19:05:37",79.79,14.47,3.24,62.06,44.41,
+"2021-02-28 19:25:25",80.19,14.80,3.24,62.13,44.45,
+"2021-02-25 19:08:08",79.85,15.03,3.22,61.60,43.99,
+"2021-02-23 19:34:26",80.42,14.01,3.30,63.10,45.35,
+"2021-02-15 19:38:43",79.76,14.28,3.25,62.22,44.56,
+"2021-02-13 18:59:02",79.96,15.07,3.22,61.66,44.05,
+"2021-02-12 19:06:49",78.77,14.68,3.18,60.89,43.41,
+"2021-02-10 19:51:26",78.54,13.91,3.21,61.41,43.88,
+"2021-02-08 20:14:27",79.71,13.12,3.31,63.26,45.62,
+"2021-02-05 20:30:28",78.66,13.82,3.22,61.60,44.05,
+"2021-02-04 17:59:53",78.86,13.43,3.25,62.16,44.59,
+"2021-01-31 18:26:27",78.60,14.40,3.19,60.99,43.50,
+"2021-01-30 18:44:14",78.95,15.20,3.16,60.57,43.14,
+"2021-01-28 20:10:19",79.16,12.95,3.30,62.91,45.33,
+"2021-01-23 20:31:28",78.54,13.09,3.25,62.18,44.65,
+"2021-01-16 20:34:07",78.87,11.95,3.34,63.56,46.16,
+"2021-01-03 18:56:08",78.02,11.41,3.33,63.26,46.04,
+"2020-12-29 20:00:08",78.47,12.11,3.31,63.03,45.62,
+"2020-12-03 19:19:58",79.92,12.88,3.34,63.68,46.04,
+"2020-11-27 18:38:02",80.38,13.86,3.31,63.20,45.45,
+"2020-11-25 19:46:06",81.15,13.91,3.34,63.88,46.05,
+"2020-11-24 19:52:55",80.19,14.12,3.28,62.77,45.05,
+"2020-11-21 20:30:41",80.16,14.56,3.26,62.33,44.64,
+"2020-11-20 19:28:35",80.53,14.38,3.28,62.86,45.10,
+"2020-11-19 19:49:46",79.74,14.07,3.26,62.39,44.72,
+"2020-11-18 19:26:06",80.45,14.50,3.27,62.66,44.92,
+"2020-11-16 19:41:39",80.22,15.08,3.23,61.90,44.25,
+"2020-11-13 19:17:46",80.10,15.20,3.22,61.66,44.05,
+"2020-11-12 19:23:12",79.87,15.18,3.21,61.47,43.89,
+"2020-11-08 18:14:17",79.93,14.88,3.23,61.81,44.18,
+"2020-11-07 19:33:45",80.74,14.50,3.29,62.93,45.16,
+"2020-11-06 19:29:59",79.97,15.25,3.21,61.49,43.91,
+"2020-11-05 20:17:01",80.09,15.06,3.23,61.79,44.16,
+"2020-11-04 20:23:19",79.55,14.49,3.23,61.82,44.21,
+"2020-11-03 19:07:26",79.93,14.47,3.25,62.20,44.53,
+"2020-11-02 20:15:43",79.91,14.69,3.24,61.97,44.32,
+"2020-11-01 17:17:30",80.17,16.26,3.17,60.72,43.31,
+"2020-10-29 19:48:08",79.62,13.99,3.26,62.36,44.70,
+"2020-10-28 20:01:36",79.28,14.80,3.20,61.26,43.72,
+"2020-10-27 20:20:50",78.83,15.35,3.15,60.31,42.94,
+"2020-10-26 19:16:11",79.31,14.86,3.20,61.23,43.70,
+"2020-10-25 20:32:36",79.79,13.75,3.28,62.74,45.06,
+"2020-10-24 19:06:12",80.09,14.74,3.24,62.09,44.42,
+"2020-10-23 19:19:42",79.90,13.41,3.31,63.17,45.49,
+"2020-10-22 18:54:24",80.25,,,,,
+"2020-10-22 18:52:07",79.25,13.92,3.24,62.08,44.46,
+"2020-10-20 19:41:36",79.12,14.13,3.23,61.75,44.16,
+"2020-10-19 19:34:14",79.43,13.93,3.25,62.23,44.60,
+"2020-10-18 19:37:22",79.54,15.26,3.19,61.08,43.57,
+"2020-10-16 19:48:16",78.71,14.61,3.18,60.90,43.42,
+"2020-10-15 19:25:42",78.85,14.18,3.21,61.44,43.90,
+"2020-10-13 19:22:40",79.13,14.21,3.22,61.69,44.11,
+"2020-10-11 18:47:23",79.71,15.47,3.19,61.04,43.54,
+"2020-10-09 19:42:48",79.53,14.90,3.21,61.41,43.84,
+"2020-10-08 20:34:01",79.45,15.05,3.20,61.19,43.66,
+"2020-10-07 19:14:18",79.13,14.83,3.19,61.10,43.59,
+"2020-10-06 19:36:13",80.22,14.58,3.26,62.37,44.67,
+"2020-09-16 20:19:52",79.41,14.25,3.23,61.91,44.30,
+"2020-09-14 18:28:21",79.73,12.99,3.32,63.40,45.77,
+"2020-09-08 19:48:28",80.56,14.31,3.29,62.95,45.19,
+"2020-09-04 19:14:58",80.49,13.83,3.31,63.33,45.58,
+"2020-09-02 20:02:39",80.46,14.09,3.30,63.06,45.31,
+"2020-09-01 19:39:20",81.04,14.97,3.28,62.78,45.00,
+"2020-08-30 21:21:44",80.50,13.41,3.34,63.74,46.00,
+"2020-08-28 21:09:22",80.84,13.79,3.33,63.70,45.90,
+"2020-08-27 17:31:17",80.76,14.10,3.31,63.33,45.54,
+"2020-08-26 20:50:36",79.67,14.71,3.22,61.72,44.11,
+"2020-08-23 22:10:22",81.98,14.39,3.36,64.21,46.28,
+"2020-08-22 18:58:11",80.75,14.38,3.29,63.06,45.28,
+"2020-08-19 18:43:28",81.00,14.94,3.28,62.77,44.99,
+"2020-08-18 19:51:01",81.54,14.53,3.33,63.67,45.79,
+"2020-08-15 19:00:38",81.56,14.65,3.32,63.57,45.70,
+"2020-08-13 20:45:14",82.09,15.18,3.32,63.58,45.66,
+"2020-08-11 20:24:25",82.79,14.98,3.37,64.43,46.40,
+"2020-08-09 20:46:43",81.87,15.11,3.31,63.43,45.54,
+"2020-08-08 21:57:12",82.01,15.73,3.29,62.98,45.14,
+"2020-08-06 18:32:31",82.25,15.06,3.33,63.84,45.89,
+"2020-08-05 18:27:03",82.60,16.00,,,,
+"2020-08-02 18:26:32",81.90,16.00,,,,
+"2020-08-01 18:25:58",80.90,16.00,,,,
+"2020-07-30 18:25:25",82.80,16.00,,,,
+"2020-07-27 18:24:25",82.30,16.00,,,,
+"2020-07-23 18:23:22",83.20,16.00,,,,
+"2020-07-21 20:33:03",82.51,15.97,3.30,63.22,45.54,
+"2020-07-19 10:09:09",83.97,17.56,3.29,63.10,45.45,
+"2020-07-17 19:28:22",82.76,16.50,3.28,62.96,45.32,
+"2020-07-17 19:28:22",82.76,16.50,3.28,62.96,45.32,
+"2020-07-15 18:46:31",82.31,16.35,3.27,62.68,45.09,
+"2020-07-15 18:46:31",82.31,16.35,3.27,62.68,45.09,
+"2020-07-12 20:08:33",84.37,17.72,3.30,63.33,45.64,
+"2020-07-12 20:08:33",84.37,17.72,3.30,63.33,45.64,
+"2020-07-10 20:20:33",83.28,16.30,3.32,63.65,45.88,
+"2020-07-10 20:20:33",83.28,16.30,3.32,63.65,45.88,
+"2020-07-05 19:45:35",84.01,17.80,3.28,62.91,45.31,
+"2020-07-02 19:13:50",84.47,17.23,3.33,63.89,46.07,
+"2020-07-01 19:47:26",85.09,16.49,3.40,65.19,47.14,
+"2020-06-27 20:15:19",85.13,18.53,3.30,63.28,45.64,
+"2020-06-21 20:41:05",85.97,19.50,3.29,63.15,45.61,
+"2020-06-18 17:52:12",86.21,18.78,3.34,64.09,46.27,
+"2020-06-17 19:56:56",86.24,18.25,3.37,64.62,46.66,
+"2020-06-14 20:02:46",86.22,19.28,3.31,63.61,45.93,
+"2020-06-06 20:45:32",85.90,19.50,3.29,63.10,45.57,
+"2020-05-26 20:26:17",86.76,19.35,3.34,64.06,46.28,
+"2020-04-14 20:16:46",86.70,19.57,3.32,63.78,46.10,
+"2020-04-14 20:16:46",86.70,19.57,3.32,63.78,46.10,
+"2020-03-29 19:39:22",86.74,18.85,3.36,64.51,46.60,
+"2020-03-11 19:48:17",86.34,18.42,3.36,64.54,46.61,
+"2020-02-20 19:05:31",84.75,17.65,3.32,63.76,45.98,
+"2020-02-20 19:05:31",84.75,17.65,3.32,63.76,45.98,
+"2020-02-05 18:54:55",83.21,16.85,3.29,63.05,45.40,
+"2020-01-23 20:08:17",82.89,17.03,3.26,62.59,45.04,
+"2020-01-12 20:11:34",84.71,,,,,
+"2020-01-12 20:10:14",83.61,16.29,3.34,63.97,46.15,
+"2019-11-27 19:35:15",82.45,15.98,3.29,63.16,45.50,
+"2019-10-26 20:16:40",82.23,16.06,3.28,62.87,45.26,
+"2019-10-13 19:05:40",82.81,14.66,3.39,64.74,46.92,
+"2019-09-30 19:41:19",81.90,15.75,3.28,62.85,45.25,
+"2019-09-15 20:38:38",82.22,14.87,3.34,63.99,46.25,
+"2019-09-12 20:45:29",81.67,15.85,3.26,62.54,44.99,
+"2019-09-03 19:08:16",81.45,15.13,3.29,63.01,45.41,
+"2019-08-28 20:24:49",82.13,15.12,3.32,63.67,45.96,
+"2019-08-27 19:55:06",82.70,14.09,3.42,65.17,47.38,
+"2019-08-25 16:21:42",82.70,15.09,3.36,64.23,46.44,
+"2019-08-01 19:31:38",84.31,14.56,3.48,66.26,48.25,
+"2019-07-31 19:46:59",84.16,13.32,3.56,67.27,49.43,
+"2019-07-28 21:15:14",81.89,14.45,3.35,64.07,46.37,
+"2019-07-23 19:26:16",82.58,13.86,3.43,65.28,47.52,
+"2019-07-17 19:59:25",80.57,14.59,3.27,62.70,45.18,
+"2019-07-10 20:02:13",80.37,14.20,3.29,62.87,45.36,
+"2019-07-03 19:13:26",81.07,14.28,3.32,63.46,45.86,
+"2019-07-02 21:14:53",82.96,14.68,3.39,64.87,47.02,
+"2019-07-01 22:09:21",82.70,15.96,3.31,63.42,45.71,
+"2019-06-25 19:27:57",83.54,14.01,3.47,66.04,48.16,
+"2019-06-24 20:35:22",82.82,14.95,3.37,64.48,46.67,
+"2019-06-24 20:34:45",82.63,14.79,3.37,64.46,46.66,
+"2019-06-19 20:11:22",82.85,13.44,3.47,65.92,48.18,
+"2019-06-18 20:26:22",83.93,13.98,3.49,66.44,48.52,
+"2019-06-12 19:36:41",82.63,14.91,3.36,64.34,46.55,
+"2019-06-11 20:21:10",83.86,14.11,3.48,66.26,48.33,
+"2019-06-07 19:49:20",82.77,12.67,3.52,66.56,48.97,
+"2019-06-05 19:57:15",81.41,13.01,3.42,64.97,47.41,
+"2019-06-04 20:09:37",82.09,13.60,3.42,65.06,47.37,
+"2019-06-03 19:46:30",82.18,13.77,3.41,64.99,47.27,
+"2019-05-31 20:22:41",82.29,14.15,3.39,64.74,46.99,
+"2019-05-29 20:24:50",79.91,14.15,3.26,62.48,45.03,
+"2019-05-28 20:35:07",81.89,15.22,3.31,63.35,45.69,
+"2019-05-19 10:56:25",82.18,15.44,3.31,63.41,45.73,
+"2019-05-18 10:32:44",81.37,14.56,3.32,63.47,45.85,
+"2019-05-15 19:53:18",81.41,14.74,3.31,63.35,45.72,
+"2019-05-14 20:14:39",82.89,14.50,3.40,64.97,47.14,
+"2019-05-09 19:27:08",83.19,13.95,3.45,65.77,47.93,
+"2019-05-07 19:54:13",82.82,14.46,3.40,64.95,47.12,
+"2019-04-24 19:10:06",80.97,13.71,3.35,63.89,46.31,
+"2019-04-18 19:31:20",81.43,13.96,3.36,64.10,46.46,
+"2019-04-11 21:01:06",80.52,14.31,3.29,62.91,45.39,
+"2019-03-27 20:07:06",80.14,12.99,3.35,63.79,46.35,
+"2019-03-24 20:11:16",80.30,13.70,3.31,63.28,45.77,
+"2019-03-20 20:41:07",80.31,13.78,3.31,63.22,45.71,
+"2019-03-08 19:40:40",79.50,12.96,3.31,63.21,45.83,
+"2019-02-28 20:34:12",79.77,12.27,3.37,64.12,46.81,
+"2019-02-27 19:05:44",79.49,13.71,3.27,62.50,45.09,
+"2019-02-21 20:08:38",80.40,13.24,3.34,63.80,46.31,
+"2019-02-08 19:29:22",81.40,13.05,3.41,64.92,47.36,
+"2019-02-06 19:38:06",81.42,13.29,3.40,64.72,47.12,
+"2019-02-03 19:27:31",81.98,14.74,3.34,63.89,46.18,
+"2019-01-30 19:33:39",81.19,13.23,3.39,64.56,46.99,
+"2019-01-24 19:41:55",80.56,12.89,3.37,64.28,46.81,
+"2019-01-23 19:45:43",79.98,12.77,3.35,63.85,46.44,
+"2019-01-20 20:10:25",80.29,14.90,3.24,62.14,44.70,
+"2019-01-19 19:29:09",80.31,15.27,3.23,61.80,44.41,
+"2019-01-18 19:55:30",81.27,13.11,3.40,64.74,47.17,
+"2019-01-14 18:34:32",79.91,13.08,3.33,63.49,46.06,
+"2019-01-11 20:09:49",79.96,13.26,3.32,63.37,45.92,
+"2019-01-09 19:46:35",79.81,13.16,3.32,63.31,45.89,
+"2019-01-03 23:09:23",80.37,14.12,3.29,62.95,45.44,
+"2018-12-29 19:58:30",79.94,14.48,3.25,62.19,44.76,
+"2018-12-26 19:45:27",79.67,13.71,3.28,62.67,45.24,
+"2018-12-25 20:48:13",79.04,13.25,3.27,62.51,45.16,
+"2018-12-23 20:17:20",79.23,14.01,3.24,61.97,44.61,
+"2018-12-17 17:53:31",80.51,13.07,3.36,64.07,46.58,
+"2018-12-16 15:48:19",80.05,13.87,3.29,62.88,45.41,
+"2018-12-15 19:02:39",81.22,14.80,3.29,63.11,45.52,
+"2018-12-09 20:00:57",79.63,13.57,3.28,62.76,45.34,
+"2018-12-07 18:30:10",79.93,12.76,3.35,63.80,46.40,
+"2018-12-03 18:05:06",77.81,12.29,3.26,62.24,45.07,
+"2018-11-30 20:07:51",78.74,13.29,3.25,62.19,44.87,
+"2018-11-28 19:58:52",79.54,12.26,3.36,63.91,46.62,
+"2018-11-23 18:26:15",77.75,12.74,3.23,61.77,44.57,
+"2018-11-21 19:03:34",78.74,12.98,3.27,62.47,45.16,
+"2018-11-18 19:16:19",78.11,12.57,3.26,62.26,45.04,
+"2018-11-16 19:33:51",77.82,12.58,3.24,61.98,44.79,
+"2018-11-15 19:08:41",78.10,12.95,3.24,61.90,44.66,
+"2018-11-12 18:14:36",78.32,11.99,3.31,63.00,45.84,
+"2018-11-11 19:30:37",76.76,11.85,3.23,61.67,44.63,
+"2018-11-09 18:32:58",77.33,11.34,3.30,62.68,45.72,
+"2018-11-07 19:51:56",77.94,12.36,3.26,62.30,45.12,
+"2018-10-18 20:15:49",76.27,11.08,3.25,61.92,45.07,
+"2018-10-17 19:15:10",75.92,11.91,3.18,60.81,43.83,
+"2018-10-16 19:48:20",76.83,11.67,3.25,61.90,44.89,
+"2018-10-15 20:08:39",76.05,11.70,3.20,61.14,44.18,
+"2018-10-12 16:04:15",76.77,11.45,3.26,62.04,45.08,
+"2018-10-11 19:40:17",77.36,12.11,3.25,61.99,44.88,
+"2018-10-10 19:32:14",76.43,12.73,3.17,60.52,43.46,
+"2018-10-10 19:25:23",76.85,12.90,3.18,60.75,43.65,
+"2018-10-08 18:51:39",77.54,11.60,3.29,62.63,45.59,
+"2018-10-04 08:56:53",77.49,13.92,3.16,60.39,43.27,
+"2018-10-02 13:42:45",78.32,13.37,3.23,61.71,44.44,
+"2018-09-27 19:35:25",76.84,12.19,3.22,61.41,44.34,
+"2018-09-26 20:27:26",76.98,11.94,3.24,61.79,44.73,
+"2018-09-25 19:49:57",77.90,12.42,3.26,62.20,45.02,
+"2018-09-24 17:12:43",78.82,12.30,3.31,63.18,45.93,
+"2018-09-21 15:09:29",77.25,11.91,3.25,62.07,45.00,
+"2018-09-20 20:06:48",76.36,11.63,3.22,61.49,44.52,
+"2018-09-19 19:30:02",76.75,12.26,3.21,61.27,44.19,
+"2018-09-18 20:02:36",77.59,12.11,3.26,62.20,45.08,
+"2018-09-17 18:12:19",77.65,11.73,3.29,62.62,45.55,
+"2018-09-15 19:20:36",77.13,13.18,3.18,60.76,43.63,
+"2018-09-14 17:04:45",77.24,11.84,3.26,62.13,45.06,
+"2018-09-13 19:31:32",77.09,12.22,3.23,61.63,44.53,
+"2018-09-12 19:13:48",77.14,12.66,3.20,61.26,44.13,
+"2018-09-11 20:18:41",78.02,12.66,3.25,62.10,44.88,
+"2018-09-10 20:47:33",78.46,13.66,3.22,61.57,44.29,
+"2018-09-09 16:55:22",80.42,15.46,3.22,61.72,44.35,
+"2018-09-08 13:18:31",78.21,13.10,3.23,61.86,44.60,
+"2018-09-07 18:46:00",78.64,12.20,3.31,63.11,45.89,
+"2018-09-06 19:54:30",78.36,12.54,3.28,62.53,45.29,
+"2018-09-05 19:53:42",77.49,13.06,3.20,61.22,44.04,
+"2018-09-04 19:48:18",78.16,12.96,3.24,61.94,44.69,
+"2018-09-03 17:42:47",79.57,13.33,3.29,62.93,45.52,
+"2018-09-01 16:32:23",78.84,14.44,3.20,61.19,43.93,
+"2018-08-31 16:36:55",79.17,12.98,3.29,62.88,45.53,
+"2018-08-30 19:34:33",78.21,13.16,3.23,61.81,44.55,
+"2018-08-29 20:28:21",77.78,13.08,3.21,61.47,44.26,
+"2018-08-28 19:35:40",79.11,13.39,3.26,62.44,45.08,
+"2018-08-27 12:47:10",79.93,13.16,3.32,63.43,45.99,
+"2018-08-09 20:27:12",78.70,12.57,3.29,62.83,45.56,
+"2018-08-08 20:30:44",77.42,12.44,3.23,61.73,44.58,
+"2018-08-07 19:50:30",79.62,12.76,3.33,63.51,46.13,
+"2018-08-06 20:03:20",80.20,12.75,3.36,64.07,46.65,
+"2018-08-02 20:13:24",78.40,12.49,3.28,62.62,45.38,
+"2018-08-01 19:50:01",78.23,12.64,3.26,62.31,45.07,
+"2018-07-30 20:29:57",80.17,12.83,3.36,63.97,46.54,
+"2018-07-27 20:21:56",79.60,13.69,3.27,62.62,45.21,
+"2018-07-26 19:30:19",79.81,12.94,3.33,63.53,46.12,
+"2018-07-21 18:16:02",80.88,13.69,3.34,63.83,46.26,
+"2018-07-20 20:15:39",80.10,13.22,3.33,63.54,46.08,
+"2018-07-19 20:08:30",80.34,13.33,3.33,63.66,46.17,
+"2018-07-18 20:01:50",80.33,13.64,3.31,63.35,45.85,
+"2018-07-16 19:13:01",81.23,14.13,3.33,63.75,46.13,
+"2018-07-13 21:44:06",81.30,12.97,3.41,64.90,47.35,
+"2018-07-07 17:00:14",80.21,14.54,3.26,62.40,44.94,
+"2018-07-06 16:57:10",80.50,14.04,3.30,63.14,45.62,
+"2018-07-05 19:01:11",80.38,14.00,3.30,63.07,45.56,
+"2018-07-04 20:10:27",79.53,13.61,3.27,62.63,45.22,
+"2018-07-03 19:07:18",81.22,13.94,3.34,63.92,46.31,
+"2018-07-02 18:10:51",80.82,14.14,3.31,63.36,45.80,
+"2018-06-28 19:04:50",80.85,14.52,3.29,63.02,45.47,
+"2018-06-27 19:48:25",81.34,15.33,3.27,62.72,45.18,
+"2018-06-26 19:29:26",82.53,14.55,3.38,64.58,46.80,
+"2018-06-25 18:13:20",81.93,14.53,3.35,64.04,46.33,
+"2018-06-20 19:48:53",80.59,14.02,3.31,63.25,45.72,
+"2018-06-19 19:24:16",81.95,14.26,3.36,64.31,46.60,
+"2018-06-18 20:30:52",82.36,14.75,3.36,64.23,46.48,
+"2018-06-16 18:22:05",81.69,15.25,3.29,63.13,45.52,
+"2018-06-14 20:30:12",82.22,15.76,3.29,63.15,45.52,
+"2018-06-13 20:48:18",82.25,15.82,3.29,63.12,45.50,
+"2018-06-06 20:27:49",82.56,15.00,3.35,64.19,46.42,
+"2018-06-05 20:23:59",83.27,14.93,3.39,64.93,47.06,
+"2018-06-04 18:48:31",83.02,14.77,3.39,64.84,47.00,
+"2018-05-28 20:07:25",85.03,15.17,3.48,66.37,48.25,
+"2018-05-24 20:46:49",83.84,16.41,3.34,64.07,46.25,
+"2018-05-16 20:44:55",84.31,16.09,3.38,64.83,46.88,
+"2018-05-07 20:03:52",83.74,15.42,3.39,64.91,47.00,
+"2018-04-24 20:14:26",83.99,15.12,3.42,65.43,47.46,
+"2018-04-19 20:30:11",83.82,15.81,3.37,64.63,46.73,
+"2018-04-18 20:24:55",84.08,15.68,3.39,64.99,47.04,
+"2018-04-16 19:21:18",85.00,15.84,3.43,65.71,47.63,
+"2018-04-13 20:15:57",84.46,15.37,3.43,65.64,47.61,
+"2018-04-10 19:25:50",84.65,15.26,3.45,65.92,47.86,
+"2018-04-09 19:06:19",84.94,15.53,3.45,65.94,47.85,
+"2018-04-03 20:13:00",84.50,15.13,3.45,65.91,47.86,
+"2018-03-30 21:10:42",83.51,16.29,3.33,63.87,46.10,
+"2018-03-30 21:10:14",83.47,,,,,
+"2018-03-27 19:48:03",84.19,15.32,3.42,65.43,47.44,
+"2018-03-24 19:17:38",83.84,16.86,3.32,63.66,45.92,
+"2018-03-22 18:51:18",83.56,16.79,3.31,63.46,45.77,
+"2018-03-15 18:18:05",83.42,15.45,3.37,64.58,46.72,
+"2018-03-13 20:11:41",84.12,14.26,3.48,66.36,48.38,
+"2018-03-12 19:52:28",84.86,14.53,3.51,66.81,48.73,
+"2018-03-08 19:09:03",83.11,15.13,3.37,64.59,46.75,
+"2018-03-07 19:35:45",82.04,14.65,3.34,64.03,46.32,
+"2018-03-06 20:11:34",83.66,15.60,3.38,64.67,46.78,
+"2018-03-04 20:15:16",82.91,15.15,3.36,64.38,46.57,
+"2018-02-23 18:17:33",83.74,15.11,3.41,65.21,47.27,
+"2018-02-22 19:24:23",83.92,14.18,3.48,66.25,48.30,
+"2018-02-18 18:03:40",81.84,14.36,3.35,64.12,46.42,
+"2018-02-17 19:57:25",82.17,16.08,3.27,62.79,45.23,
+"2018-02-16 20:00:15",81.64,15.22,3.29,63.10,45.50,
+"2018-02-14 18:40:17",81.45,14.98,3.30,63.15,45.56,
+"2018-02-11 15:22:47",81.41,15.45,3.27,62.67,45.14,
+"2018-02-11 15:22:06",80.99,15.21,3.26,62.51,45.01,
+"2018-02-11 15:21:21",82.23,15.93,3.29,63.00,45.40,
+"2018-02-11 15:20:33",81.68,15.60,3.28,62.79,45.24,
+"2018-02-10 18:24:25",80.92,15.19,3.26,62.45,44.96,
+"2018-02-10 18:23:38",81.15,15.42,3.26,62.45,44.96,
+"2018-02-09 18:20:45",80.69,15.33,3.24,62.10,44.68,
+"2018-02-09 18:20:02",80.50,15.24,3.24,62.01,44.60,
+"2018-02-09 18:18:54",80.73,15.65,3.23,61.84,44.46,
+"2018-02-08 19:57:19",80.83,15.02,3.26,62.53,45.03,
+"2018-02-08 19:56:39",81.41,15.49,3.27,62.64,45.11,
+"2018-02-07 17:50:56",81.95,15.47,3.29,63.17,45.55,`;
+
+
+/* ── PARSE CSV ── */
+function parseCSV(text){
+  const lines=text.trim().split('\n');
+  const pts=[];
+  const seen=new Set();
+  for(let i=1;i<lines.length;i++){
+    const line=lines[i].trim();
+    if(!line) continue;
+    const cols=[];let cur='',inQ=false;
+    for(let c=0;c<line.length;c++){
+      if(line[c]==='"'){inQ=!inQ;}
+      else if(line[c]===','&&!inQ){cols.push(cur);cur='';}
+      else{cur+=line[c];}
+    }
+    cols.push(cur);
+    const dateStr=(cols[0]||'').trim();
+    const weightStr=(cols[1]||'').trim();
+    if(!dateStr||!weightStr) continue;
+    const d=new Date(dateStr);
+    const w=parseFloat(weightStr);
+    if(isNaN(d.getTime())||isNaN(w)||w<=0) continue;
+    const k=d.getTime();
+    if(seen.has(k)) continue;
+    seen.add(k);
+    // Store all columns for export
+    pts.push({
+      date:d, value:w,
+      fat:  parseFloat(cols[2])||null,
+      bone: parseFloat(cols[3])||null,
+      muscle:parseFloat(cols[4])||null,
+      hydration:parseFloat(cols[5])||null
+    });
+  }
+  pts.sort((a,b)=>a.date-b.date);
+  return pts;
+}
+
+/* ── FORMAT CSV FOR EXPORT ── */
+function dataToCSV(data){
+  const rows=['Date,"Weight (kg)","Fat mass (kg)","Bone mass (kg)","Muscle mass (kg)","Hydration (kg)",Comments'];
+  data.forEach(p=>{
+    const dt=p.date.getFullYear()+'-'+
+      String(p.date.getMonth()+1).padStart(2,'0')+'-'+
+      String(p.date.getDate()).padStart(2,'0')+' '+
+      String(p.date.getHours()).padStart(2,'0')+':'+
+      String(p.date.getMinutes()).padStart(2,'0')+':'+
+      String(p.date.getSeconds()).padStart(2,'0');
+    const fat=p.fat!=null?p.fat.toFixed(2):'';
+    const bone=p.bone!=null?p.bone.toFixed(2):'';
+    const muscle=p.muscle!=null?p.muscle.toFixed(2):'';
+    const hyd=p.hydration!=null?p.hydration.toFixed(2):'';
+    rows.push(`"${dt}",${p.value.toFixed(2)},${fat},${bone},${muscle},${hyd},`);
+  });
+  return rows.join('\n');
+}
+
+/* ── TIME PILLS ── */
+document.querySelectorAll('.pill-btn').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('.pill-btn').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active');
+  const v=b.dataset.days;
+  selDays=(v==='custom'||v==='all')?v:parseInt(v);
+  document.getElementById('customRange').style.display=selDays==='custom'?'flex':'none';
+  navOffset=0;
+  if(allData.length) applyWindow();
+}));
+const todayInit=new Date();
+document.getElementById('endDate').value=todayInit.toISOString().split('T')[0];
+const d30i=new Date();d30i.setDate(todayInit.getDate()-30);
+document.getElementById('startDate').value=d30i.toISOString().split('T')[0];
+document.getElementById('startDate').addEventListener('change',()=>{if(allData.length&&selDays==='custom'){navOffset=0;applyWindow();}});
+document.getElementById('endDate').addEventListener('change',()=>{if(allData.length&&selDays==='custom'){navOffset=0;applyWindow();}});
+
+/* ── MAVG WINDOW ── */
+document.querySelectorAll('.mavg-btn').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('.mavg-btn').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active');
+  mavgDays=parseInt(b.dataset.mavgdays);
+  if(rawData.length){computeAnalytics();draw();}
+}));
+
+/* ── WINDOW BOUNDS ── */
+function getWindowBounds(){
+  if(selDays==='all'||selDays==='custom') return null;
+  const windowMs=selDays*86400000;
+  const latestDate=allData[allData.length-1].date;
+  const end=new Date(latestDate.getTime()-navOffset*windowMs);
+  const start=new Date(end.getTime()-windowMs);
+  return {start,end};
+}
+
+/* ── APPLY WINDOW ── */
+function applyWindow(){
+  if(!allData.length) return;
+  let start,end;
+  if(selDays==='all'){
+    start=new Date(0);end=new Date();
+    rawData=allData.slice();
+  } else if(selDays==='custom'){
+    start=new Date(document.getElementById('startDate').value);
+    end=new Date(document.getElementById('endDate').value);
+    end.setHours(23,59,59);
+    rawData=allData.filter(p=>p.date>=start&&p.date<=end);
+  } else {
+    const wb=getWindowBounds();
+    start=wb.start;end=wb.end;
+    rawData=allData.filter(p=>p.date>start&&p.date<=end);
+  }
+  updateNavButtons(start,end);
+  if(!rawData.length){showEmpty('No data in this time window.');return;}
+  hideEmpty();
+  cidx=null;
+  computeAnalytics();
+  renderStats(start,end);
+  draw(start,end);
+  renderTable();
+}
+
+function updateNavButtons(start,end){
+  const lBtn=document.getElementById('navLeft');
+  const rBtn=document.getElementById('navRight');
+  const info=document.getElementById('navInfo');
+  if(selDays==='all'||selDays==='custom'){
+    lBtn.disabled=true;rBtn.disabled=true;info.textContent='';return;
+  }
+  lBtn.disabled=(start<=allData[0].date);
+  rBtn.disabled=(navOffset<=0);
+  info.textContent=navOffset===0?'current period':`${navOffset} period${navOffset>1?'s':''} ago`;
+}
+
+/* ── NAVIGATE ── */
+function navigate(dir){
+  // dir=-1: go to older (prev), dir=+1: go to newer (next)
+  navOffset=Math.max(0,navOffset-dir);
+  applyWindow();
+}
+
+/* ── UNIT ── */
+function setUnit(btn){
+  document.querySelectorAll('.unit-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');unit=btn.dataset.unit;
+  if(rawData.length){computeAnalytics();renderStats();draw();renderTable();}
+}
+function cv(kg){return unit==='lbs'?+(kg*2.20462).toFixed(2):+kg.toFixed(2);}
+function ul(){return unit;}
+
+/* ── LAYERS ── */
+function toggleLayer(btn){
+  const t=btn.dataset.type;layers[t]=!layers[t];
+  btn.classList.toggle('active',layers[t]);
+  if(rawData.length) draw();
+}
+
+/* ── HEALTH CONNECT ── */
+async function connectHC(){
+  if(typeof HealthConnect!=='undefined'){
+    try{
+      const ok=await HealthConnect.requestPermission([
+        {accessType:'read',recordType:'WeightRecord'},
+        {accessType:'write',recordType:'WeightRecord'}
+      ]);
+      if(ok){
+        hcConnected=true;
+        setStatus(true,'Health Connect connected');
+        // Load all HC data
+        const recs=await HealthConnect.readRecords('WeightRecord',{
+          timeRangeFilter:{type:'between',startTime:new Date(0).toISOString(),endTime:new Date().toISOString()}
+        });
+        hcData=recs.map(r=>({date:new Date(r.time),value:r.weight.inKilograms})).sort((a,b)=>a.date-b.date);
+        // If we already have CSV data, merge and sync
+        if(allData.length>0){
+          mergeAndSync();
+        } else {
+          allData=hcData.slice();
+          updateDataInfo();navOffset=0;applyWindow();
+        }
+      }
+    }catch(e){alert('Health Connect error:\n'+e.message);}
+  } else {
+    alert('Health Connect Web API is only available inside an Android TWA / WebView.\n\nTo test on Android: wrap this PWA as a TWA and add Health Connect permissions to AndroidManifest.xml.');
+  }
+}
+
+/* ── MERGE & SYNC: write missing CSV data to HC ── */
+async function mergeAndSync(){
+  // Build a set of HC timestamps (by date, rounded to day+hour+min to tolerate small diffs)
+  const hcKeys=new Set(hcData.map(p=>dayKey(p.date)));
+
+  // Find CSV entries missing from HC
+  const missing=allData.filter(p=>!hcKeys.has(dayKey(p.date)));
+
+  if(missing.length>0){
+    showToast(`Syncing ${missing.length} missing records to Health Connect…`);
+    try{
+      const records=missing.map(p=>({
+        time:p.date.toISOString(),
+        kg:p.value
+      }));
+      await HealthConnect.writeRecords(records);
+      showToast(`✓ ${missing.length} records written to Health Connect`);
+    }catch(e){
+      showToast(`⚠ Sync failed: ${e.message}`);
+    }
+  } else {
+    showToast('✓ Health Connect already up to date');
+  }
+
+  // Merge: union of hcData and allData
+  const merged=mergeDatasets(allData,hcData);
+  allData=merged;
+  updateDataInfo();navOffset=0;applyWindow();
+}
+
+function dayKey(d){
+  // Key by date+hour+minute to identify same measurement (allow ±0 tolerance)
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}-${d.getHours()}-${d.getMinutes()}`;
+}
+
+function mergeDatasets(a,b){
+  const map=new Map();
+  a.forEach(p=>map.set(p.date.getTime(),p));
+  b.forEach(p=>{if(!map.has(p.date.getTime())) map.set(p.date.getTime(),p);});
+  return Array.from(map.values()).sort((a,b)=>a.date-b.date);
+}
+
+function setStatus(ok,label){
+  const p=document.getElementById('statusPill'),t=document.getElementById('statusText');
+  p.classList.toggle('connected',ok);
+  t.textContent=label||(ok?'Connected':'Not connected');
+}
+
+/* ── LOAD CSV FILE ── */
+function loadCSVFile(event){
+  const file=event.target.files[0];
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=(e)=>{
+    try{
+      const parsed=parseCSV(e.target.result);
+      if(!parsed.length){alert('No valid data found in CSV.');return;}
+      allData=parsed;
+      setStatus(true,'CSV loaded');
+      updateDataInfo();navOffset=0;
+      applyWindow();
+      // If HC already connected, sync
+      if(hcConnected) mergeAndSync();
+    }catch(err){alert('Error parsing CSV: '+err.message);}
+  };
+  reader.readAsText(file);
+  event.target.value='';
+}
+
+/* ── LOAD EXAMPLE ── */
+function loadExample(){
+  allData=parseCSV(EXAMPLE_CSV);
+  setStatus(true,'Example data loaded');
+  updateDataInfo();navOffset=0;
+  applyWindow();
+  if(hcConnected) mergeAndSync();
+}
+
+function updateDataInfo(){
+  if(!allData.length){document.getElementById('dataInfo').textContent='';return;}
+  const first=allData[0].date.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'2-digit'});
+  const last=allData[allData.length-1].date.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'2-digit'});
+  document.getElementById('dataInfo').textContent=`${allData.length} pts · ${first}–${last}`;
+}
+
+/* ── EXPORT ── */
+function openExportModal(){
+  const info=document.getElementById('exportInfo');
+  if(!allData.length){
+    info.innerHTML='<em>No data loaded yet.</em>';
+  } else {
+    const first=allData[0].date.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+    const last=allData[allData.length-1].date.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+    info.innerHTML=`<strong>${allData.length} records</strong> will be exported<br>${first} &rarr; ${last}<br><br>Format: CSV (weight.csv compatible)<br>Columns: Date, Weight (kg), Fat mass, Bone mass, Muscle mass, Hydration`;
+  }
+  document.getElementById('exportModal').style.display='flex';
+}
+function closeExportModal(){
+  document.getElementById('exportModal').style.display='none';
+}
+function doExport(){
+  if(!allData.length){closeExportModal();return;}
+  const csv=dataToCSV(allData);
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  // Generate filename with date range
+  const from=allData[0].date.toISOString().split('T')[0];
+  const to=allData[allData.length-1].date.toISOString().split('T')[0];
+  a.href=url;
+  a.download=`weight_${from}_${to}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  closeExportModal();
+  showToast('✓ Export downloaded');
+}
+
+/* ── TOAST ── */
+function showToast(msg,ms=3500){
+  const t=document.getElementById('syncToast');
+  t.textContent=msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer=setTimeout(()=>t.classList.remove('show'),ms);
+}
+
+/* ── ANALYTICS ── */
+function computeAnalytics(){
+  const n=rawData.length;
+  const ys=rawData.map(p=>p.value);
+  if(n<2){fit={slope:0,intercept:ys[0]||0,n};mavgArr=ys.slice();renderTrend(0);return;}
+  const mx=(n-1)/2,my=ys.reduce((a,b)=>a+b,0)/n;
+  let num=0,den=0;
+  ys.forEach((y,i)=>{num+=(i-mx)*(y-my);den+=(i-mx)**2;});
+  const slope=den?num/den:0;
+  const intercept=my-slope*mx;
+  fit={slope,intercept,n};
+  const spanMs=rawData[n-1].date-rawData[0].date;
+  const spanDays=Math.max(spanMs/86400000,0.001);
+  const slopePerDay=slope*(n-1)/spanDays;
+  renderTrend(slopePerDay);
+  // Moving average using mavgDays
+  mavgArr=ys.map((_,i)=>{
+    const cutoff=new Date(rawData[i].date.getTime()-mavgDays*86400000);
+    const vals=[];
+    for(let j=i;j>=0;j--){
+      if(rawData[j].date<cutoff) break;
+      vals.push(ys[j]);
+    }
+    return vals.reduce((a,b)=>a+b,0)/vals.length;
+  });
+}
+
+function renderTrend(slopePerDay){
+  const perWeek =slopePerDay*7;
+  const perMonth=slopePerDay*30.44;
+  const perYear =slopePerDay*365.25;
+  function setT(id,v){
+    const el=document.getElementById(id);
+    const disp=unit==='lbs'?v*2.20462:v;
+    const sign=disp>=0?'+':'';
+    const cls=Math.abs(disp)>0.02?(disp>0?'up':'down'):'flat';
+    el.textContent=`${sign}${disp.toFixed(2)} ${ul()}`;
+    el.className=`trend-val ${cls}`;
+  }
+  setT('trendWeek',perWeek);
+  setT('trendMonth',perMonth);
+  setT('trendYear',perYear);
+  document.getElementById('trendBox').style.display='block';
+}
+
+/* ── STATS ── */
+function renderStats(start,end){
+  const vals=rawData.map(p=>cv(p.value));
+  const delta=vals[vals.length-1]-vals[0];
+  document.getElementById('sCur').textContent=`${vals[vals.length-1].toFixed(1)} ${ul()}`;
+  document.getElementById('sMin').textContent=`${Math.min(...vals).toFixed(1)} ${ul()}`;
+  document.getElementById('sMax').textContent=`${Math.max(...vals).toFixed(1)} ${ul()}`;
+  document.getElementById('sAvg').textContent=`${(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1)} ${ul()}`;
+  const dEl=document.getElementById('sDlt');
+  dEl.textContent=`${delta>=0?'+':''}${delta.toFixed(1)} ${ul()}`;
+  dEl.style.color=delta<0?'var(--accent3)':delta>0?'var(--accent2)':'var(--muted)';
+  const dAvgEl=document.getElementById('sDltAvg');
+  if(selDays!=='all'&&selDays!=='custom'&&start&&end){
+    const windowMs=end-start;
+    const prevStart=new Date(start.getTime()-windowMs);
+    const prevData=allData.filter(p=>p.date>prevStart&&p.date<=start);
+    if(prevData.length>0){
+      const curAvg=vals.reduce((a,b)=>a+b,0)/vals.length;
+      const prevAvg=prevData.map(p=>cv(p.value)).reduce((a,b)=>a+b,0)/prevData.length;
+      const dAvg=curAvg-prevAvg;
+      dAvgEl.textContent=`${dAvg>=0?'+':''}${dAvg.toFixed(1)} ${ul()}`;
+      dAvgEl.style.color=dAvg<0?'var(--accent3)':dAvg>0?'var(--accent2)':'var(--muted)';
+    } else {
+      dAvgEl.textContent='n/a'; dAvgEl.style.color='var(--muted)';
+    }
+  } else {
+    dAvgEl.textContent='—'; dAvgEl.style.color='var(--muted)';
+  }
+  document.getElementById('statsRow').style.display='grid';
+}
+
+/* ── DRAW ── */
+function draw(start,end){
+  const card=document.getElementById('chartCard');
+  card.style.display='block';
+  const canvas=document.getElementById('wc');
+  const dpr=window.devicePixelRatio||1;
+  const W=card.clientWidth-26,H=250;
+  canvas.style.width=W+'px';canvas.style.height=H+'px';
+  canvas.width=W*dpr;canvas.height=H*dpr;
+  const ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);
+  const n=rawData.length;
+  if(!n){return;}
+  const ysKg=rawData.map(p=>p.value);
+  const ysD=ysKg.map(v=>cv(v));
+  const fitD=ysKg.map((_,i)=>cv(fit.slope*i+fit.intercept));
+  const mavD=mavgArr.map(v=>cv(v));
+  const pad={top:14,right:12,bottom:34,left:50};
+  const cW=W-pad.left-pad.right,cH=H-pad.top-pad.bottom;
+  let yMin=Math.min(...ysD,...fitD),yMax=Math.max(...ysD,...fitD);
+  const yPad=(yMax-yMin)*.1||.5;yMin-=yPad;yMax+=yPad;
+  const xp=i=>pad.left+(n>1?(i/(n-1))*cW:cW/2);
+  const yp=v=>pad.top+(1-(v-yMin)/(yMax-yMin))*cH;
+  // grid
+  ctx.font=`10px 'DM Mono',monospace`;
+  for(let t=0;t<=5;t++){
+    const v=yMin+(yMax-yMin)*t/5,y=yp(v);
+    ctx.strokeStyle='rgba(31,45,61,.7)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(pad.left-3,y);ctx.lineTo(W-pad.right,y);
+    ctx.globalAlpha=.5;ctx.stroke();ctx.globalAlpha=1;
+    ctx.fillStyle='#566578';ctx.textAlign='right';
+    ctx.fillText(v.toFixed(1),pad.left-7,y+4);
+  }
+  // x labels
+  ctx.textAlign='center';ctx.fillStyle='#566578';
+  const maxL=Math.min(6,n);
+  for(let k=0;k<maxL;k++){
+    const i=Math.round(k*(n-1)/(Math.max(maxL-1,1)));
+    const fmt=n>365?{month:'short',year:'2-digit'}:{day:'2-digit',month:'short'};
+    ctx.fillText(rawData[i].date.toLocaleDateString('en-GB',fmt),xp(i),H-pad.bottom+16);
+  }
+  // moving avg
+  if(layers.mavg&&n>=2){
+    ctx.beginPath();
+    mavD.forEach((v,i)=>i?ctx.lineTo(xp(i),yp(v)):ctx.moveTo(xp(i),yp(v)));
+    ctx.strokeStyle='rgba(180,138,255,.85)';ctx.lineWidth=2;ctx.lineJoin='round';ctx.setLineDash([]);ctx.stroke();
+  }
+  // linear fit
+  if(layers.fit&&n>=2){
+    ctx.beginPath();ctx.moveTo(xp(0),yp(fitD[0]));ctx.lineTo(xp(n-1),yp(fitD[n-1]));
+    ctx.strokeStyle='rgba(255,77,109,.95)';ctx.lineWidth=2.5;ctx.setLineDash([]);ctx.stroke();
+  }
+  // raw
+  if(layers.raw&&n>=1){
+    if(n>=2){
+      ctx.beginPath();
+      ysD.forEach((v,i)=>i?ctx.lineTo(xp(i),yp(v)):ctx.moveTo(xp(i),yp(v)));
+      ctx.strokeStyle='rgba(0,229,255,.3)';ctx.lineWidth=1.5;ctx.lineJoin='round';ctx.setLineDash([]);ctx.stroke();
+    }
+    // dots: skip if too many points
+    if(n<=300){
+      ysD.forEach((v,i)=>{
+        ctx.beginPath();ctx.arc(xp(i),yp(v),cidx===i?5.5:2.5,0,Math.PI*2);
+        ctx.fillStyle=cidx===i?'#00e5ff':'rgba(0,229,255,.65)';ctx.fill();
+      });
+    }
+  }
+  // cursor
+  if(cidx!==null&&cidx>=0&&cidx<n){
+    const cx=xp(cidx);
+    ctx.beginPath();ctx.moveTo(cx,pad.top);ctx.lineTo(cx,H-pad.bottom);
+    ctx.strokeStyle='rgba(255,255,255,.14)';ctx.lineWidth=1;ctx.setLineDash([4,3]);ctx.stroke();ctx.setLineDash([]);
+    if(layers.fit){ctx.beginPath();ctx.arc(cx,yp(fitD[cidx]),5,0,Math.PI*2);ctx.fillStyle='rgba(255,77,109,.95)';ctx.fill();}
+    if(layers.mavg){ctx.beginPath();ctx.arc(cx,yp(mavD[cidx]),4.5,0,Math.PI*2);ctx.fillStyle='rgba(180,138,255,.9)';ctx.fill();}
+    const tt=document.getElementById('tt');
+    document.getElementById('ttDate').textContent=rawData[cidx].date.toLocaleDateString('en-GB',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});
+    document.getElementById('rRaw').style.display=layers.raw?'flex':'none';
+    document.getElementById('rFit').style.display=layers.fit?'flex':'none';
+    document.getElementById('rMavg').style.display=layers.mavg?'flex':'none';
+    if(layers.raw)  document.getElementById('vRaw').textContent=`${ysD[cidx].toFixed(2)} ${ul()}`;
+    if(layers.fit)  document.getElementById('vFit').textContent=`${fitD[cidx].toFixed(2)} ${ul()}`;
+    if(layers.mavg) document.getElementById('vMavg').textContent=`${mavD[cidx].toFixed(2)} ${ul()}`;
+    const ttW=162,margin=12;
+    tt.style.left=(cx+margin+ttW>W?cx-ttW-margin:cx+margin)+'px';
+    tt.style.top=(pad.top+6)+'px';
+    tt.style.display='block';
+  } else {
+    document.getElementById('tt').style.display='none';
+  }
+  // period label
+  if(start&&end){
+    const s=start.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'2-digit'});
+    const e2=end.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'2-digit'});
+    document.getElementById('chartPeriodLabel').textContent=`${s} – ${e2}`;
+  } else {
+    document.getElementById('chartPeriodLabel').textContent='';
+  }
+  // legend
+  const items=[];
+  if(layers.raw)  items.push({c:'rgba(0,229,255,.75)',  l:'Raw Data'});
+  if(layers.fit)  items.push({c:'rgba(255,77,109,.95)', l:'Linear Fit'});
+  if(layers.mavg) items.push({c:'rgba(180,138,255,.85)',l:'Moving Avg'});
+  document.getElementById('legend').innerHTML=items.map(x=>`<div class="legend-item"><span class="leg-sw" style="background:${x.c}"></span>${x.l}</div>`).join('');
+}
+
+/* ── CURSOR EVENTS ── */
+function pointerPos(e){
+  const canvas=document.getElementById('wc');
+  const rect=canvas.getBoundingClientRect();
+  const clientX=e.touches?e.touches[0].clientX:e.clientX;
+  const frac=Math.max(0,Math.min(1,(clientX-rect.left-50)/(rect.width-62)));
+  return Math.round(frac*(rawData.length-1));
+}
+document.getElementById('wc').addEventListener('mousemove',e=>{if(!rawData.length)return;cidx=pointerPos(e);draw();});
+document.getElementById('wc').addEventListener('touchmove',e=>{if(!rawData.length)return;cidx=pointerPos(e);draw();},{passive:true});
+document.getElementById('wc').addEventListener('mouseleave',()=>{cidx=null;if(rawData.length)draw();});
+document.getElementById('wc').addEventListener('touchend',()=>{cidx=null;if(rawData.length)draw();});
+
+/* ── TABLE ── */
+function renderTable(){
+  const tbody=document.getElementById('tableBody');
+  const slice=[...rawData].reverse().slice(0,15);
+  tbody.innerHTML=slice.map((p,i)=>{
+    const v=cv(p.value);
+    const fi=rawData.length-1-i;
+    const fv=cv(fit.slope*fi+fit.intercept);
+    const prev=i<slice.length-1?cv(slice[i+1].value):null;
+    const d=prev!==null?v-prev:null;
+    const dc=d===null?'#566578':d<0?'var(--accent3)':d>0?'var(--accent2)':'var(--muted)';
+    return `<tr><td>${p.date.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'2-digit'})}</td><td class="v">${v.toFixed(2)}</td><td class="fv">${fv.toFixed(2)}</td><td style="color:${dc}">${d!==null?(d>=0?'+':'')+d.toFixed(2):'—'}</td></tr>`;
+  }).join('');
+  document.getElementById('tableCard').style.display='block';
+}
+
+/* ── HELPERS ── */
+function showEmpty(m){
+  document.getElementById('emptyState').innerHTML=`<div class="big">📭</div>${m}`;
+  ['chartCard','statsRow','trendBox','tableCard'].forEach(id=>document.getElementById(id).style.display='none');
+  document.getElementById('emptyState').style.display='block';
+}
+function hideEmpty(){document.getElementById('emptyState').style.display='none';}
+window.addEventListener('resize',()=>{if(rawData.length)draw();});
+
+/* ── SERVICE WORKER ── */
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('/weightlens/sw.js',{scope:'/weightlens/'})
+      .then(r=>console.log('[WeightLens] SW registered, scope:',r.scope))
+      .catch(e=>console.warn('[WeightLens] SW registration failed:',e));
+  });
+}
+</script>
+</body>
+</html>
