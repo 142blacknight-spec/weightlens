@@ -5,9 +5,9 @@
   ],
   "target": {
     "namespace": "android_app",
-    "package_name": "com.yourname.weightlens",
+    "package_name": "com.diego.weightlens",
     "sha256_cert_fingerprints": [
-      "REPLACE_WITH_YOUR_KEYSTORE_SHA256_FINGERPRINT"
+      "keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android"
     ]
   }
 }]
